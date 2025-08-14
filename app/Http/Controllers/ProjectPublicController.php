@@ -132,6 +132,43 @@ class ProjectPublicController extends Controller
             ->with('success', 'APK uploaded successfully.');
     }
 
+
+    // ================== Web: Login + Upload ==================
+    public function loginAndUpload(Request $request, $project_slug)
+    {
+        $project = Project::where('slug', $project_slug)->firstOrFail();
+
+        $request->validate([
+            'email' => 'required|email',
+            'password' => 'required',
+        ]);
+
+        $credentials = $request->only('email', 'password');
+
+        // Try user login
+        if (Auth::guard('web')->attempt($credentials)) {
+            $request->session()->regenerate();
+
+            // Check if user has access to this project
+            if (!Auth::guard('web')->user()->projects->contains($project)) {
+                Auth::guard('web')->logout();
+                return redirect()->back()->with('showLogin', true)
+                    ->with('error', 'You do not have access to this project.');
+            }
+
+            return redirect()->route('project.uploadForm', $project_slug);
+        }
+
+        // Try admin login
+        if (Auth::guard('admin')->attempt($credentials)) {
+            $request->session()->regenerate();
+            return redirect()->route('project.uploadForm', $project_slug);
+        }
+
+        return redirect()->back()->with('showLogin', true)
+            ->with('error', 'Invalid credentials. Please try again.');
+    }
+
     // ================== API: Download APK ==================
     public function apiDownload(ProjectApk $apk, Request $request)
     {
