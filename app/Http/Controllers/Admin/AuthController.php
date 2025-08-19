@@ -7,11 +7,18 @@ use Illuminate\Http\Request;
 use Illuminate\Support\Facades\Auth;
 use Illuminate\Support\Facades\RateLimiter;
 use Illuminate\Validation\ValidationException;
+use Illuminate\Support\Facades\Route;
+use Illuminate\Support\Facades\Cookie;
 
 class AuthController extends Controller
 {
     public function showLoginForm()
     {
+        // Check if user is already logged in
+        if (Auth::guard('admin')->check()) {
+            return redirect()->route('admin.dashboard');
+        }
+
         return view('admin.auth.login');
     }
 
@@ -25,9 +32,12 @@ class AuthController extends Controller
         ]);
 
         $credentials = $request->only('email', 'password');
-        $credentials['is_active'] = true;
+        $remember = $request->filled('remember');
 
-        if (Auth::guard('admin')->attempt($credentials, $request->filled('remember'))) {
+        // Add any additional conditions like is_active if needed
+        // $credentials['is_active'] = true;
+
+        if (Auth::guard('admin')->attempt($credentials, $remember)) {
             $request->session()->regenerate();
             $this->clearLoginAttempts($request);
             
@@ -37,6 +47,11 @@ class AuthController extends Controller
                 'last_login_at' => now(),
                 'last_login_ip' => $request->ip(),
             ]);
+
+            // Set remember token properly if remember is checked
+            if ($remember) {
+                Auth::guard('admin')->login($admin, true);
+            }
 
             return redirect()->intended(route('admin.dashboard'));
         }
@@ -50,12 +65,31 @@ class AuthController extends Controller
 
     public function logout(Request $request)
     {
-        Auth::guard('admin')->logout();
-        
+        try {
+            // Clear remember token
+            if (Auth::guard('admin')->check()) {
+                $user = Auth::guard('admin')->user();
+                $user->remember_token = null;
+                $user->save();
+            }
+
+            Auth::guard('admin')->logout();
+        } catch (\Exception $e) {
+            // ignore if already logged out
+        }
+
         $request->session()->invalidate();
         $request->session()->regenerateToken();
-        
-        return redirect()->route('admin.login');
+
+        // Clear any remember cookies
+        Cookie::queue(Cookie::forget('remember_admin_' . sha1(config('app.key'))));
+
+        if (Route::has('admin.login')) {
+            return redirect()->route('admin.login');
+        }
+
+        // Fallback if somehow route not found
+        return redirect('/admin/login');
     }
 
     protected function checkTooManyFailedAttempts(Request $request)
@@ -86,4 +120,3 @@ class AuthController extends Controller
         return strtolower($request->input('email')) . '|' . $request->ip();
     }
 }
-?>

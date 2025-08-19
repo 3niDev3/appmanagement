@@ -16,51 +16,56 @@
 
 </head>
 <body>
-    <!-- Header -->
-    <header class="header">
-        <div class="header-content">
-            <h1><i class="fas fa-tachometer-alt me-2"></i>Admin Dashboard</h1>
-            <div class="user-info">
-                <span><i class="fas fa-user-circle me-2"></i>Welcome, {{ auth('admin')->user()->name ?? 'Admin' }}!</span>
+
+    <div class="dashboard-container">
+        <!-- Sidebar -->
+        <nav class="sidebar">
+            <div class="logo">
+                <i class="fas fa-cog"></i>
+                <h1>Admin Panel</h1>
+            </div>
+            
+            <div class="nav-section">
+                <div class="nav-title">Control Panel</div>
+                <a href="{{ route('admin.dashboard') }}" class="{{ request()->routeIs('admin.dashboard') ? 'active' : '' }} nav-item">
+                    <i class="fas fa-home"></i>
+                    <span>Dashboard</span>
+                </a>
+            </div>
+            
+            <div class="nav-section">
+                <div class="nav-title">Main</div>
+                <a href="{{ route('admin.projects.index') }}" class="{{ request()->routeIs('admin.projects.*') ? 'active' : '' }} nav-item">
+                    <i class="fas fa-folder"></i>
+                    <span>All Projects</span>
+                    <span class="badge">{{ \App\Models\Project::count() ?? 0 }}</span>
+                </a>
+                <a href="{{ route('admin.users.index') }}" class="{{ request()->routeIs('admin.users.*') ? 'active' : '' }} nav-item">
+                    <i class="fas fa-users"></i>
+                    <span>All Users</span>
+                    <span class="badge">{{ \App\Models\User::count() ?? 0 }}</span>
+                </a>
+            </div>
+        </nav>
+        <!-- Main Content -->
+        <main class="main-content">
+
+            <header class="header">
+                <div class="welcome-text">
+                    <div class="user-avatar">
+                        {{ strtoupper(substr(explode(' ', auth('admin')->user()->name ?? 'Admin')[0], 0, 1) . substr(explode(' ', auth('admin')->user()->name ?? 'Admin')[1] ?? '', 0, 1)) }}
+                    </div>
+                    Welcome, {{ auth('admin')->user()->name ?? 'Admin' }}!
+                </div>
                 <form method="POST" action="{{ route('admin.logout') }}" class="d-inline">
                     @csrf
                     <button type="submit" class="logout-btn">
                         <i class="fas fa-sign-out-alt me-1"></i>Logout
                     </button>
                 </form>
-            </div>
-        </div>
-    </header>
+            </header>
 
-    <div class="admin-layout">
-        <!-- Sidebar -->
-        <nav class="sidebar">
-            <div class="sidebar-header">
-                <h3><i class="fas fa-cogs me-2"></i>Control Panel</h3>
-            </div>
-            
-            <div class="sidebar-menu">
-                <div class="menu-section">
-                    <div class="menu-section-title">Main</div>
-                    <ul>
-                        <li><a href="{{ route('admin.dashboard') }}" class="{{ request()->routeIs('admin.dashboard') ? 'active' : '' }}">
-                            <i class="fas fa-home"></i>Dashboard
-                        </a></li>
-                        <li><a href="{{ route('admin.projects.index') }}" class="{{ request()->routeIs('admin.projects.*') ? 'active' : '' }}">
-                            <i class="fas fa-box"></i>All Projects
-                            <span class="badge">{{ \App\Models\Project::count() ?? 0 }}</span>
-                        </a></li>
-                        <li><a href="{{ route('admin.users.index') }}" class="{{ request()->routeIs('admin.users.*') ? 'active' : '' }}">
-                            <i class="fas fa-users"></i>All Users
-                            <span class="badge">{{ \App\Models\User::count() ?? 0 }}</span>
-                        </a></li>
-                    </ul>
-                </div>
-            </div>
-        </nav>
 
-        <!-- Main Content -->
-        <main class="main-content">
             <!-- Success Alert -->
             @if(session('success'))
                 <div class="alert alert-success alert-dismissible fade show" role="alert">

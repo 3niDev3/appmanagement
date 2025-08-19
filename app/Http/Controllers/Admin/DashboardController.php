@@ -11,9 +11,6 @@ class DashboardController extends Controller
     public function index()
     {
         // Get Blog statistics
-      
-        
-        
         return view('admin.dashboard');
     }
 }

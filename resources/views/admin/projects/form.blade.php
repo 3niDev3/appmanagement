@@ -3,9 +3,10 @@
 @section('title', isset($project) ? 'Edit Project' : 'Create Project')
 
 @section('content')
-    <div class="container py-5">
-        <h2 class="text-white mb-4">{{ isset($project) ? 'Edit Project' : 'Create Project' }}</h2>
-
+    <div class="content py-5">
+        <div class="page-header">
+            <h1 class="page-title">{{ isset($project) ? 'Edit Project' : 'Create Project' }}</h1>
+        </div>
         <!-- Display Validation Errors -->
         @if ($errors->any())
             <div class="alert alert-danger">
@@ -86,7 +87,7 @@
 <style>
     body { background-color: #111; }
     .form-control:focus { box-shadow: none; border-color: #777; background-color:#222; color:#fff; }
-    .btn-dark { background-color: #000; border-color: #444; color: #fff; }
+    .btn-dark { background: linear-gradient(45deg, #ff6b6b, #4ecdc4); border-color: #444; color: #fff; }
     .btn-dark:hover { background-color: #fff; color: #000; }
     .btn-outline-light { color: #fff; border-color: #777; }
     .btn-outline-light:hover { background-color: #222; border-color: #fff; }
@@ -109,6 +110,11 @@
         margin-right: 4px;
         cursor: pointer;
     }
+
+    .text-info{
+        color: #fff !important;
+    }
+    
 </style>
 @endpush
 @push('scripts')

@@ -43,7 +43,7 @@
         </div>
     @else
         <div class="row justify-content-center">
-            <div class="col-md-6">
+            <div class="col-lg-6 col-md-12">
                 <!-- User Welcome -->
                 @php
                     $currentUser = Auth::guard('web')->check() ? Auth::guard('web')->user() :

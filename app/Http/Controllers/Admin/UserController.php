@@ -29,12 +29,14 @@ class UserController extends Controller
             'email' => 'required|email|unique:users,email',
             'password' => 'required|string|min:6|confirmed',
             'projects' => 'nullable|array',
+            'can_upload' => 'nullable|boolean',
         ]);
 
         $user = User::create([
             'name' => $request->name,
             'email' => $request->email,
             'password' => Hash::make($request->password),
+            'can_upload' => $request->has('can_upload'), // ✅ checkbox handling
         ]);
 
         if ($request->projects) {
@@ -55,14 +57,17 @@ class UserController extends Controller
         $request->validate([
             'name' => 'required|string|max:255',
             'email' => "required|email|unique:users,email,{$user->id}",
-            'password' => 'nullable|string|min:6|confirmed',
+            'password' => 'nullable|string|min:6|required_with:password_confirmation|same:password_confirmation',
+            'password_confirmation' => 'nullable|string|min:6',
             'projects' => 'nullable|array',
+            'can_upload' => 'nullable|boolean',
         ]);
 
         $user->name = $request->name;
         $user->email = $request->email;
+        $user->can_upload = $request->has('can_upload');
 
-        if ($request->password) {
+        if ($request->filled('password')) {
             $user->password = Hash::make($request->password);
         }
 
@@ -73,11 +78,12 @@ class UserController extends Controller
         return redirect()->route('admin.users.index')->with('success', 'User updated successfully.');
     }
 
-    public function destroy(User $user)
-    {
-        $user->projects()->detach();
-        $user->delete();
 
-        return redirect()->route('admin.users.index')->with('success', 'User deleted successfully.');
+        public function destroy(User $user)
+        {
+            $user->projects()->detach();
+            $user->delete();
+
+            return redirect()->route('admin.users.index')->with('success', 'User deleted successfully.');
+        }
     }
-}

@@ -11,16 +11,13 @@ use App\Http\Controllers\ProjectPublicController;
 // -----------------------------
 Route::prefix('admin')->name('admin.')->group(function () {
 
-    // Guest admin routes
-    Route::middleware('guest:admin')->group(function () {
-        Route::get('login', [AdminAuthController::class, 'showLoginForm'])->name('login');
-        Route::post('login', [AdminAuthController::class, 'login']);
-    });
+    Route::get('login', [AdminAuthController::class, 'showLoginForm'])->name('login');
+    Route::post('login', [AdminAuthController::class, 'login']);
+    Route::post('logout',  [AdminAuthController::class, 'logout'])->name('logout');
 
     // Authenticated admin routes
-    Route::middleware('auth:admin')->group(function () {
+    Route::middleware(['admin.auth'])->group(function () {
         Route::get('dashboard', [DashboardController::class, 'index'])->name('dashboard');
-        Route::post('logout', [AdminAuthController::class, 'logout'])->name('logout');
         Route::resource('projects', ProjectController::class);
         Route::resource('users', UserController::class);
     });

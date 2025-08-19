@@ -74,36 +74,34 @@
 
         @forelse($apks as $apk)
             <div class="apk-row p-3 mb-3 rounded shadow-sm bg-white" data-apk-id="{{ $apk->id }}">
-                <div class="d-flex justify-content-between align-items-center">
-                    <div class="d-flex align-items-center">
-                        <i class="bi bi-phone fs-3 me-3 text-primary"></i>
-                        <div>
-                            <div class="fw-semibold">{{ $apk->filename }}</div>
-                            <div class="text-muted small">{{ $apk->created_at->format('d M Y h:i A') }}</div>
-                            @if($apk->uploadedBy)
-                                <div class="text-muted small">By: {{ $apk->uploadedBy->name }}</div>
-                            @endif
-                            <div class="text-muted small download-count">
-                                Downloads: <span>{{ $apk->download_count ?? 0 }}</span>
-                            </div>
+                <div class="d-flex align-items-center">
+                    <i class="bi bi-phone fs-3 me-3 text-primary"></i>
+                    <div>
+                        <div class="fw-semibold">{{ $apk->filename }}</div>
+                        <div class="text-muted small">{{ $apk->created_at->format('d M Y h:i A') }}</div>
+                        @if($apk->uploadedBy)
+                            <div class="text-muted small">By: {{ $apk->uploadedBy->name }}</div>
+                        @endif
+                        <div class="text-muted small download-count">
+                            Downloads: <span>{{ $apk->download_count ?? 0 }}</span>
                         </div>
                     </div>
-                    <div class="d-flex align-items-center gap-2">
-                        @if($apk->description)
-                            <button class="btn btn-outline-secondary btn-sm toggle-details">
-                                <i class="bi bi-chevron-down"></i>
-                            </button>
-                        @endif
-                        <button class="btn btn-success btn-sm btn-download"
-                            data-apk-id="{{ $apk->id }}"
-                            data-file-name="{{ $apk->filename }}">
-                            <i class="bi bi-download"></i> Download
+                </div>
+                <div class="d-flex align-items-center gap-2">
+                    @if($apk->description)
+                        <button class="btn btn-outline-secondary btn-sm toggle-details">
+                            <i class="bi bi-chevron-down"></i>
                         </button>
-                        <button class="btn btn-info btn-sm btn-history" 
-                            data-apk-id="{{ $apk->id }}">
-                            <i class="bi bi-clock-history"></i> History
-                        </button>
-                    </div>
+                    @endif
+                    <button class="btn btn-success btn-sm btn-download"
+                        data-apk-id="{{ $apk->id }}"
+                        data-file-name="{{ $apk->filename }}">
+                        <i class="bi bi-download"></i> Download
+                    </button>
+                    <button class="btn btn-info btn-sm btn-history" 
+                        data-apk-id="{{ $apk->id }}">
+                        <i class="bi bi-clock-history"></i> History
+                    </button>
                 </div>
                 @if($apk->description)
                     <div class="apk-details mt-2 px-4 py-2 mb-2 border-top" style="display:none;">
@@ -141,6 +139,110 @@
     top: 50%; 
     left: 50%; 
     transform: translate(-50%, -50%);
+}
+
+/* Card responsiveness */
+.card {
+    border-radius: 1rem;
+}
+
+/* APK rows */
+.apk-row { 
+    transition: transform 0.2s, box-shadow 0.2s; 
+    border-radius: 0.75rem;
+    background: #fff;
+    word-break: break-word;
+    display: flex;
+    justify-content: space-between;
+    align-items: center;
+}
+.apk-row:hover { 
+    transform: translateY(-2px); 
+    box-shadow: 0 4px 12px rgba(0,0,0,0.1); 
+}
+.apk-details { 
+    font-size: 0.9rem; 
+    color: #555; 
+}
+.toggle-details { 
+    border-radius: 50%; 
+}
+.download-history { 
+    font-size: 0.85rem; 
+    color: #555; 
+    border-top: 1px dashed #ccc; 
+    margin-top: 5px; 
+    padding-top: 5px; 
+}
+.btn-download:disabled { 
+    opacity: 0.6; 
+}
+
+/* Login card */
+.card-body {
+    padding: 2rem;
+}
+.form-label {
+    font-size: 0.85rem;
+}
+
+/* Alerts */
+.alert {
+    border-radius: 0.75rem;
+    font-size: 0.9rem;
+    padding: 0.75rem 1rem;
+}
+
+/* Responsive Design */
+
+/* For tablets and smaller (≤ 992px) */
+@media (max-width: 992px) {
+    .apk-row {
+        flex-direction: column;
+        gap: 1rem;
+        align-items: normal;
+    }
+
+}
+
+/* For mobile (≤ 768px) */
+@media (max-width: 768px) {
+    .card-body {
+        padding: 1.25rem;
+    }
+    h2.fw-bold {
+        font-size: 1.4rem;
+    }
+    .apk-row {
+        padding: 1rem;
+    }
+    .apk-row .fs-3 {
+        font-size: 1.8rem !important;
+    }
+    .apk-row .btn-sm {
+        font-size: 0.8rem;
+        padding: 0.35rem 0.6rem;
+    }
+    .apk-details {
+        font-size: 0.8rem;
+    }
+}
+
+/* Extra small mobile (≤ 480px) */
+@media (max-width: 480px) {
+    .card {
+        margin: 0 0.5rem;
+    }
+    .card-body {
+        padding: 1rem;
+    }
+    h2.fw-bold {
+        font-size: 1.2rem;
+    }
+    .apk-row .fw-semibold {
+        font-size: 0.9rem;
+    }
+
 }
 </style>
 

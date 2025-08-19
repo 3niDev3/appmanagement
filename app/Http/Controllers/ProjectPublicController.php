@@ -97,6 +97,13 @@ class ProjectPublicController extends Controller
 
         try {
             $this->checkProjectAccess($project_slug);
+
+            // ✅ extra check for normal users
+            if (Auth::guard('web')->check() && !Auth::guard('web')->user()->can_upload) {
+                return redirect()->route('project.list', $project_slug)
+                    ->with('error', 'You are not allowed to upload.');
+            }
+
         } catch (\Illuminate\Validation\ValidationException $e) {
             return view('projects.upload', compact('project'))
                 ->with('showLogin', true)
@@ -106,10 +113,17 @@ class ProjectPublicController extends Controller
         return view('projects.upload', compact('project'));
     }
 
+
     // ================== Web: Upload Store ==================
     public function uploadStore(Request $request, $project_slug)
     {
         $project = $this->checkProjectAccess($project_slug);
+
+        // ✅ block non-upload users
+        if (Auth::guard('web')->check() && !Auth::guard('web')->user()->can_upload) {
+            return redirect()->route('project.list', $project_slug)
+                ->with('error', 'You are not allowed to upload.');
+        }
 
         $request->validate([
             'apk_file' => 'required|file|mimes:apk,zip|max:512000',
@@ -133,6 +147,7 @@ class ProjectPublicController extends Controller
     }
 
 
+
     // ================== Web: Login + Upload ==================
     public function loginAndUpload(Request $request, $project_slug)
     {
@@ -149,17 +164,25 @@ class ProjectPublicController extends Controller
         if (Auth::guard('web')->attempt($credentials)) {
             $request->session()->regenerate();
 
-            // Check if user has access to this project
-            if (!Auth::guard('web')->user()->projects->contains($project)) {
+            $user = Auth::guard('web')->user();
+
+            if (!$user->projects->contains($project)) {
                 Auth::guard('web')->logout();
                 return redirect()->back()->with('showLogin', true)
                     ->with('error', 'You do not have access to this project.');
             }
 
+            // ✅ check upload permission
+            if (!$user->can_upload) {
+                Auth::guard('web')->logout();
+                return redirect()->back()->with('showLogin', true)
+                    ->with('error', 'You are not allowed to upload.');
+            }
+
             return redirect()->route('project.uploadForm', $project_slug);
         }
 
-        // Try admin login
+        // Try admin login (admins always allowed)
         if (Auth::guard('admin')->attempt($credentials)) {
             $request->session()->regenerate();
             return redirect()->route('project.uploadForm', $project_slug);
@@ -167,7 +190,8 @@ class ProjectPublicController extends Controller
 
         return redirect()->back()->with('showLogin', true)
             ->with('error', 'Invalid credentials. Please try again.');
-    }
+}
+
 
     // ================== API: Download APK ==================
     public function apiDownload(ProjectApk $apk, Request $request)

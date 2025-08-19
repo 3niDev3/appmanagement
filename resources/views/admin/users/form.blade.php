@@ -1,8 +1,9 @@
 @extends('admin.layouts.admin')
 
 @section('content')
-<div class="container py-5">
-    @php
+<div class="content">
+    <div class="form-admin">
+        @php
         $isEdit = isset($user);
     @endphp
 
@@ -17,23 +18,35 @@
 
         <div class="mb-3">
             <label class="form-label text-white">Name</label>
-            <input type="text" name="name" class="form-control" value="{{ old('name', $user->name ?? '') }}" style="background-color:#222; color:#fff; border:1px solid #555;">
+            <input type="text" name="name" class="form-control" value="{{ old('name', $user->name ?? '') }}" 
+                   required style="background-color:#222; color:#fff; border:1px solid #555;">
         </div>
 
         <div class="mb-3">
             <label class="form-label text-white">Email</label>
-            <input type="email" name="email" class="form-control" value="{{ old('email', $user->email ?? '') }}" style="background-color:#222; color:#fff; border:1px solid #555;">
+            <input type="email" name="email" class="form-control" value="{{ old('email', $user->email ?? '') }}" 
+                   required style="background-color:#222; color:#fff; border:1px solid #555;">
         </div>
 
         <div class="mb-3">
-            <label class="form-label text-white">{{ $isEdit ? 'Password (leave blank to keep current)' : 'Password' }}</label>
-            <input type="password" name="password" class="form-control" style="background-color:#222; color:#fff; border:1px solid #555;">
+            <label class="form-label text-white">
+                {{ $isEdit ? 'New Password' : 'Password' }}
+            </label>
+            <input type="password" name="password" class="form-control" 
+                autocomplete="new-password"
+                {{ !$isEdit ? 'required' : '' }}
+                style="background-color:#222; color:#fff; border:1px solid #555;">
         </div>
 
         <div class="mb-3">
-            <label class="form-label text-white">{{ $isEdit ? 'Confirm Password' : 'Confirm Password' }}</label>
-            <input type="password" name="password_confirmation" class="form-control" style="background-color:#222; color:#fff; border:1px solid #555;">
+            <label class="form-label text-white">
+                {{ $isEdit ? 'Confirm New Password' : 'Confirm Password' }}
+            </label>
+            <input type="password" name="password_confirmation" class="form-control" 
+                autocomplete="new-password"
+                style="background-color:#222; color:#fff; border:1px solid #555;">
         </div>
+
 
         <div class="mb-3">
             <label class="form-label text-white">Assign Projects</label>
@@ -46,12 +59,18 @@
                     </option>
                 @endforeach
             </select>
-
-
         </div>
+
+        <div class="mb-3 form-check">
+            <input type="checkbox" class="form-check-input" id="can_upload" name="can_upload"
+                {{ old('can_upload', $user->can_upload ?? false) ? 'checked' : '' }}>
+            <label class="form-check-label text-white" for="can_upload">Allow user to upload URLs</label>
+        </div>
+
 
         <button type="submit" class="btn btn-dark">{{ $isEdit ? 'Update User' : 'Create User' }}</button>
     </form>
+    </div>
 </div>
 
 @endsection
@@ -60,12 +79,11 @@
     <style>
         body { background-color: #111; }
         .form-control:focus, .form-select:focus { box-shadow: none; border-color: #777; }
-        .btn-dark { background-color: #000; border-color: #444; color: #fff; }
+        .btn-dark { background: linear-gradient(45deg, #ff6b6b, #4ecdc4); border-color: #444; color: #fff; }
         .btn-dark:hover { background-color: #222; }
-        .alert-success { background-color: #333; border-color: #444; color: #fff; }
-        .alert-danger { background-color: #333; border-color: #444; color: #fff; }
+        .alert-success { background-color: #28a745; border-color: #1e7e34; color: #fff; }
+        .alert-danger { background-color: #dc3545; border-color: #bd2130; color: #fff; }
         label.text-white { font-weight: 600; }
-
 
         /* Style the selected tags */
         .select2-container--classic .select2-selection--multiple .select2-selection__choice {
@@ -83,9 +101,9 @@
             margin-right: 4px;
             cursor: pointer;
         }
-
     </style>
 @endpush
+
 @push('scripts')
 <script src="https://code.jquery.com/jquery-3.6.0.min.js"></script>
 <script src="https://cdn.jsdelivr.net/npm/select2@4.1.0-rc.0/dist/js/select2.min.js"></script>
@@ -121,8 +139,30 @@
 
         // Update colors on select/unselect
         $('#projectsSelect').on('select2:select select2:unselect', applyTagColors);
+
+        // Debug form submission
+        $('form').on('submit', function(e) {
+            var password = $('input[name="password"]').val();
+            var passwordConfirm = $('input[name="password_confirmation"]').val();
+            
+            console.log('Form submitted');
+            console.log('Password field value:', password);
+            console.log('Password confirmation value:', passwordConfirm);
+            console.log('Passwords match:', password === passwordConfirm);
+            
+            // Don't prevent submission, just log for debugging
+        });
+
+
+        // Require confirm password only if password is filled
+        $('input[name="password"]').on('input', function() {
+            if ($(this).val().length > 0) {
+                $('input[name="password_confirmation"]').attr('required', true);
+            } else {
+                $('input[name="password_confirmation"]').removeAttr('required');
+            }
+        });
+
     });
 </script>
-
 @endpush
-

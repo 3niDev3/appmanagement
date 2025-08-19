@@ -3,54 +3,98 @@
 @section('title', 'Users')
 
 @section('content')
-<div class="container-fluid py-4">
-    <div class="d-flex justify-content-between align-items-center mb-3">
-        <h2 class="text-dark">Users</h2>
-        <a href="{{ route('admin.users.create') }}" class="btn btn-primary">Add User</a>
+<div class="content">
+    <div class="page-header">
+        <h1 class="page-title">Users</h1>
+        <a href="{{ route('admin.users.create') }}" class="add-btn">
+            <i class="fas fa-plus"></i>
+            Add User
+        </a>
     </div>
 
-    <div class="card bg-dark text-white">
-        <div class="card-body p-0">
-            <table class="table table-dark table-striped mb-0">
-                <thead>
-                    <tr>
-                        <th>ID</th>
-                        <th>Name</th>
-                        <th>Email</th>
-                        <th>Projects</th>
-                        <th>Created At</th>
-                        <th>Actions</th>
-                    </tr>
-                </thead>
-                <tbody>
-                    @forelse($users as $user)
-                        <tr>
-                            <td>{{ $user->id }}</td>
-                            <td>{{ $user->name }}</td>
-                            <td>{{ $user->email }}</td>
-                            <td>{{ $user->projects->pluck('name')->implode(', ') }}</td>
-                            <td>{{ $user->created_at->format('d M Y') }}</td>
-                            <td>
-                                <a href="{{ route('admin.users.edit', $user->id) }}" class="btn btn-sm btn-warning">Edit</a>
-                                <form action="{{ route('admin.users.destroy', $user->id) }}" method="POST" class="d-inline-block" onsubmit="return confirm('Are you sure?');">
-                                    @csrf
-                                    @method('DELETE')
-                                    <button class="btn btn-sm btn-danger">Delete</button>
-                                </form>
-                            </td>
-                        </tr>
-                    @empty
-                        <tr>
-                            <td colspan="5" class="text-center">No Users found.</td>
-                        </tr>
-                    @endforelse
-                </tbody>
-            </table>
+    <div class="projects-container"> {{-- reusing same container styles --}}
+        <div class="table-header">
+            <div>ID</div>
+            <div>Name</div>
+            <div>Email</div>
+            <div>Projects</div>
+            <div>Created At</div>
+            <div>Actions</div>
         </div>
+
+        @forelse($users as $user)
+            <div class="project-row"> {{-- same row style --}}
+                <div class="project-id">{{ $user->id }}</div>
+                <div class="project-name">{{ $user->name }}</div>
+                <div class="project-name">{{ $user->email }}</div>
+                <div class="project-name">{{ $user->projects->pluck('name')->implode(', ') }}</div>
+                <div class="project-date">{{ $user->created_at->format('d M Y') }}</div>
+                <div class="actions">
+                    <a href="{{ route('admin.users.edit', $user->id) }}" class="action-btn edit-btn">
+                        <i class="fas fa-edit"></i> Edit
+                    </a>
+                    <form action="{{ route('admin.users.destroy', $user->id) }}" method="POST" class="d-inline-block delete-form">
+                        @csrf
+                        @method('DELETE')
+                        <button type="button" class="action-btn delete-btn" onclick="confirmDelete(this)">
+                            <i class="fas fa-trash"></i> Delete
+                        </button>
+                    </form>
+                </div>
+            </div>
+        @empty
+            <div class="no-data">
+                No Users found.
+            </div>
+        @endforelse
     </div>
+
     <div class="mt-3">
         {{ $users->withQueryString()->links() }}
     </div>
 </div>
 @endsection
 
+@push('scripts')
+<script>
+    function confirmDelete(button) {
+        if (confirm('Are you sure?')) {
+            button.closest('form').submit();
+        }
+    }
+</script>
+@endpush
+@push('styles')
+    <style>
+        .table-header,
+        .project-row {
+            display: grid;
+            grid-template-columns:
+                80px             
+                minmax(180px, 1fr) 
+                minmax(200px, 1.5fr) 
+                minmax(140px, 1fr)
+                150px             
+                180px;             
+            gap: 2rem;
+            align-items: center;
+        }
+
+        .table-header {
+            background: rgba(255, 255, 255, 0.05);
+            padding: 1.5rem 2rem;
+            font-weight: 600;
+            color: rgba(255, 255, 255, 0.8);
+            font-size: 14px;
+            text-transform: uppercase;
+            letter-spacing: 0.5px;
+        }
+
+        .project-row {
+            padding: 1.5rem 2rem;
+            border-top: 1px solid rgba(255, 255, 255, 0.08);
+            color: #fff;
+        }
+
+    </style>
+@endpush
