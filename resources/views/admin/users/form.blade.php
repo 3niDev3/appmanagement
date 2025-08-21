@@ -62,10 +62,12 @@
         </div>
 
         <div class="mb-3 form-check">
-            <input type="checkbox" class="form-check-input" id="can_upload" name="can_upload"
+            <input type="hidden" name="can_upload" value="0"> <!-- always send false if unchecked -->
+            <input type="checkbox" class="form-check-input" id="can_upload" name="can_upload" value="1"
                 {{ old('can_upload', $user->can_upload ?? false) ? 'checked' : '' }}>
             <label class="form-check-label text-white" for="can_upload">Allow user to upload URLs</label>
         </div>
+
 
 
         <button type="submit" class="btn btn-dark">{{ $isEdit ? 'Update User' : 'Create User' }}</button>

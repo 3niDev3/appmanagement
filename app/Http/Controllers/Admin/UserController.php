@@ -60,7 +60,7 @@ class UserController extends Controller
             'password' => 'nullable|string|min:6|required_with:password_confirmation|same:password_confirmation',
             'password_confirmation' => 'nullable|string|min:6',
             'projects' => 'nullable|array',
-            'can_upload' => 'nullable|boolean',
+            'can_upload' => 'sometimes|boolean',
         ]);
 
         $user->name = $request->name;
