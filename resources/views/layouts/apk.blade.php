@@ -70,6 +70,59 @@
             white-space: nowrap;
         }
     </style>
+    <style>
+    .upload-card {
+        border: 2px dashed #dee2e6;
+        border-radius: 15px;
+        background-color: #f8f9fa;
+        transition: all 0.3s ease;
+    }
+
+    .dropzone {
+        border: 2px dashed #6c757d;
+        background-color: #f1f3f5;
+        cursor: pointer;
+        transition: all 0.3s ease;
+    }
+
+    .dropzone:hover, .dropzone.dragover {
+        border-color: #007bff;
+        background-color: #e3f2fd;
+    }
+
+    .progress-container {
+        margin-top: 20px;
+    }
+
+    .progress {
+        height: 25px;
+        border-radius: 15px;
+        background-color: #e9ecef;
+    }
+
+    .progress-bar {
+        border-radius: 15px;
+        transition: width 0.3s ease;
+    }
+
+    .upload-status {
+        margin-top: 10px;
+        font-size: 14px;
+    }
+
+    .speed-info {
+        font-size: 12px;
+        color: #6c757d;
+    }
+
+    .file-info {
+        background: #e3f2fd;
+        border: 1px solid #2196f3;
+        border-radius: 8px;
+        padding: 10px;
+        margin: 15px 0;
+    }
+</style>
 </head>
 <body>
     <nav class="navbar navbar-expand-lg">
@@ -87,5 +140,216 @@
     </footer>
 
     <script src="https://cdn.jsdelivr.net/npm/bootstrap@5.3.2/dist/js/bootstrap.bundle.min.js"></script>
+    <script>
+document.addEventListener('DOMContentLoaded', function() {
+    const dropzone = document.getElementById('apkDropzone');
+    const input = document.getElementById('apkInput');
+    const dropText = document.getElementById('dropzoneText');
+    const form = document.getElementById('uploadForm');
+    const progressContainer = document.getElementById('progressContainer');
+    const progressBar = document.getElementById('progressBar');
+    const progressText = document.getElementById('progressText');
+    const statusText = document.getElementById('statusText');
+    const speedText = document.getElementById('speedText');
+    const uploadBtn = document.getElementById('uploadBtn');
+    const cancelBtn = document.getElementById('cancelBtn');
+    const fileInfo = document.getElementById('fileInfo');
+    const fileName = document.getElementById('fileName');
+    const fileSize = document.getElementById('fileSize');
+    const removeFile = document.getElementById('removeFile');
+    
+    let currentXHR = null;
+    let startTime = 0;
+
+    // File selection events
+    dropzone.addEventListener('click', () => input.click());
+    dropzone.addEventListener('dragover', handleDragOver);
+    dropzone.addEventListener('dragleave', handleDragLeave);
+    dropzone.addEventListener('drop', handleDrop);
+    input.addEventListener('change', handleFileSelect);
+    removeFile.addEventListener('click', clearFile);
+    
+    // Form submission
+    form.addEventListener('submit', function(e) {
+        e.preventDefault();
+        
+        const file = input.files[0];
+        if (!file) {
+            alert('Please select a file to upload');
+            return;
+        }
+
+        startUpload();
+    });
+
+    // Cancel upload
+    cancelBtn.addEventListener('click', function() {
+        if (currentXHR) {
+            currentXHR.abort();
+        }
+    });
+
+    function handleDragOver(e) {
+        e.preventDefault();
+        dropzone.classList.add('dragover');
+    }
+
+    function handleDragLeave(e) {
+        e.preventDefault();
+        dropzone.classList.remove('dragover');
+    }
+
+    function handleDrop(e) {
+        e.preventDefault();
+        dropzone.classList.remove('dragover');
+        const file = e.dataTransfer.files[0];
+        if (file) {
+            input.files = e.dataTransfer.files;
+            showFileInfo(file);
+        }
+    }
+
+    function handleFileSelect(e) {
+        const file = e.target.files[0];
+        if (file) {
+            showFileInfo(file);
+        }
+    }
+
+    function showFileInfo(file) {
+        fileName.textContent = file.name;
+        fileSize.textContent = formatFileSize(file.size);
+        fileInfo.style.display = 'block';
+        dropText.textContent = 'File selected: ' + file.name;
+    }
+
+    function clearFile() {
+        input.value = '';
+        fileInfo.style.display = 'none';
+        dropText.textContent = 'Click or drag file here';
+        resetProgress();
+    }
+
+    function formatFileSize(bytes) {
+        if (bytes === 0) return '0 Bytes';
+        const k = 1024;
+        const sizes = ['Bytes', 'KB', 'MB', 'GB'];
+        const i = Math.floor(Math.log(bytes) / Math.log(k));
+        return parseFloat((bytes / Math.pow(k, i)).toFixed(2)) + ' ' + sizes[i];
+    }
+
+    function startUpload() {
+        const formData = new FormData(form);
+        showProgress();
+        startTime = Date.now();
+
+        currentXHR = new XMLHttpRequest();
+
+        // Upload progress
+        currentXHR.upload.addEventListener('progress', function(e) {
+            if (e.lengthComputable) {
+                const percentComplete = Math.round((e.loaded / e.total) * 100);
+                updateProgress(percentComplete, e.loaded, e.total);
+            }
+        });
+
+        // Upload complete
+        currentXHR.addEventListener('load', function() {
+            if (currentXHR.status === 200) {
+                uploadSuccess();
+            } else {
+                uploadError('Upload failed with status: ' + currentXHR.status);
+            }
+        });
+
+        // Upload error
+        currentXHR.addEventListener('error', function() {
+            uploadError('Upload failed due to network error');
+        });
+
+        // Upload aborted
+        currentXHR.addEventListener('abort', function() {
+            uploadCancelled();
+        });
+
+        // Send request
+        currentXHR.open('POST', form.action);
+        currentXHR.send(formData);
+    }
+
+    function showProgress() {
+        progressContainer.style.display = 'block';
+        uploadBtn.style.display = 'none';
+        cancelBtn.style.display = 'block';
+        input.disabled = true;
+    }
+
+    function updateProgress(percent, loaded, total) {
+        progressBar.style.width = percent + '%';
+        progressBar.setAttribute('aria-valuenow', percent);
+        progressText.textContent = percent + '%';
+        
+        // Calculate upload speed
+        const elapsed = (Date.now() - startTime) / 1000;
+        const speed = loaded / elapsed;
+        const remaining = (total - loaded) / speed;
+        
+        statusText.textContent = `Uploading... ${formatFileSize(loaded)} of ${formatFileSize(total)}`;
+        speedText.textContent = `Speed: ${formatFileSize(speed)}/s • ETA: ${formatTime(remaining)}`;
+    }
+
+    function uploadSuccess() {
+        progressBar.classList.remove('progress-bar-animated');
+        progressBar.classList.add('bg-success');
+        statusText.textContent = 'Upload completed successfully!';
+        speedText.textContent = 'File uploaded and processed';
+        
+        setTimeout(() => {
+            window.location.href = "{{ route('project.list', $project->slug) }}";
+        }, 2000);
+    }
+
+    function uploadError(message) {
+        progressBar.classList.remove('progress-bar-animated');
+        progressBar.classList.add('bg-danger');
+        statusText.textContent = 'Upload failed!';
+        speedText.textContent = message;
+        resetUploadState();
+    }
+
+    function uploadCancelled() {
+        statusText.textContent = 'Upload cancelled';
+        speedText.textContent = '';
+        resetProgress();
+        resetUploadState();
+    }
+
+    function resetUploadState() {
+        setTimeout(() => {
+            uploadBtn.style.display = 'block';
+            cancelBtn.style.display = 'none';
+            input.disabled = false;
+        }, 3000);
+    }
+
+    function resetProgress() {
+        progressContainer.style.display = 'none';
+        progressBar.style.width = '0%';
+        progressBar.classList.remove('bg-success', 'bg-danger');
+        progressBar.classList.add('progress-bar-animated');
+        progressText.textContent = '0%';
+        statusText.textContent = 'Preparing upload...';
+        speedText.textContent = '';
+    }
+
+    function formatTime(seconds) {
+        if (!isFinite(seconds) || seconds < 0) return '--:--';
+        
+        const mins = Math.floor(seconds / 60);
+        const secs = Math.floor(seconds % 60);
+        return `${mins}:${secs.toString().padStart(2, '0')}`;
+    }
+});
+</script>
 </body>
 </html>

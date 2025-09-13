@@ -13,7 +13,7 @@
 
     <div class="projects-container">
         <div class="table-header">
-            <div>ID</div>
+            <div>#</div>
             <div>Name</div>
             <div>URLs</div>
             <div>Created At</div>
@@ -22,7 +22,9 @@
 
         @forelse($projects as $project)
             <div class="project-row">
-                <div class="project-id">{{ $project->id }}</div>
+                <div class="project-id">
+                    {{ ($projects->currentPage() - 1) * $projects->perPage() + $loop->iteration }}
+                </div>
                 <div class="project-name">{{ $project->name }}</div>
                 <div class="project-urls">
                     <div class="url-group">

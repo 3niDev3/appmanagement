@@ -10,9 +10,10 @@ use Validator;
 
 class ProjectController extends Controller
 {
+
     public function index()
     {
-        $projects = Project::paginate(10);
+        $projects = Project::orderBy('created_at', 'desc')->paginate(10);
         return view('admin.projects.index', compact('projects'));
     }
 

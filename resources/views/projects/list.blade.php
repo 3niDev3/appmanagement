@@ -216,101 +216,183 @@
     }
 
 }
-</style>
+
+/* Enhanced download progress styles */
+.download-progress-container {
+    background: #f8f9fa;
+    border: 1px solid #e9ecef;
+    border-radius: 8px;
+    padding: 15px;
+    margin-top: 10px;
+    animation: slideDown 0.3s ease-out;
+}
+
+@keyframes slideDown {
+    from {
+        opacity: 0;
+        max-height: 0;
+        padding-top: 0;
+        padding-bottom: 0;
+    }
+    to {
+        opacity: 1;
+        max-height: 100px;
+        padding-top: 15px;
+        padding-bottom: 15px;
+    }
+}
+
+.download-progress-container .progress {
+    height: 12px;
+    background-color: #e9ecef;
+    border-radius: 6px;
+    overflow: hidden;
+    box-shadow: inset 0 1px 2px rgba(0,0,0,0.1);
+}
+
+.download-progress-container .progress-bar {
+    transition: width 0.3s ease;
+    background: linear-gradient(45deg, #28a745 25%, transparent 25%, transparent 50%, #28a745 50%, #28a745 75%, transparent 75%);
+    background-size: 20px 20px;
+    animation: progressAnimation 1s linear infinite;
+}
+
+@keyframes progressAnimation {
+    0% { background-position: 0 0; }
+    100% { background-position: 20px 0; }
+}
+
+.download-progress-container .progress-bar.bg-danger {
+    background: #dc3545;
+    animation: none;
+}
+
+.download-status {
+    font-weight: 500;
+    color: #495057;
+}
+
+.download-percentage {
+    font-weight: 600;
+    color: #28a745;
+    font-family: 'Courier New', monospace;
+}
+
+/* Enhanced floating alerts */
+.floating-alert {
+    animation: slideInRight 0.3s ease-out;
+    backdrop-filter: blur(10px);
+    background: rgba(255, 255, 255, 0.95);
+}
+
+@keyframes slideInRight {
+    from {
+        transform: translateX(100%);
+        opacity: 0;
+    }
+    to {
+        transform: translateX(0);
+        opacity: 1;
+    }
+}
+
+.floating-alert.alert-success {
+    background: rgba(40, 167, 69, 0.95);
+    color: white;
+    border-left: 4px solid #28a745;
+}
+
+.floating-alert.alert-danger {
+    background: rgba(220, 53, 69, 0.95);
+    color: white;
+    border-left: 4px solid #dc3545;
+}
+
+.floating-alert.alert-info {
+    background: rgba(23, 162, 184, 0.95);
+    color: white;
+    border-left: 4px solid #17a2b8;
+}
+
+/* Enhanced button states */
+.btn-download {
+    position: relative;
+    transition: all 0.3s ease;
+}
+
+.btn-download:disabled {
+    background-color: #6c757d;
+    border-color: #6c757d;
+    transform: none;
+}
+
+.btn-download:not(:disabled):hover {
+    transform: translateY(-2px);
+    box-shadow: 0 4px 8px rgba(0,0,0,0.15);
+}
+
+/* Pulse animation for active downloads */
+.downloading {
+    animation: pulse 2s infinite;
+}
+
+@keyframes pulse {
+    0% { box-shadow: 0 0 0 0 rgba(40, 167, 69, 0.7); }
+    70% { box-shadow: 0 0 0 10px rgba(40, 167, 69, 0); }
+    100% { box-shadow: 0 0 0 0 rgba(40, 167, 69, 0); }
+}
+
+/* Mobile responsiveness for progress */
+@media (max-width: 768px) {
+    .download-progress-container {
+        padding: 10px;
+        margin-top: 8px;
+    }
+    
+    .floating-alert {
+        left: 10px;
+        right: 10px;
+        min-width: auto;
+        max-width: none;
+    }
+    
+    .download-status {
+        font-size: 0.8rem;
+    }
+    
+    .download-percentage {
+        font-size: 0.8rem;
+    }
+}
+
+@media (max-width: 480px) {
+    .download-progress-container .progress {
+        height: 10px;
+    }
+    
+    .floating-alert {
+        top: 10px;
+        font-size: 0.9rem;
+    }
+}
 </style>
 
 <script>
 const csrfToken = '{{ csrf_token() }}';
 
-// Device/OS detection
-function getDeviceInfo() {
-    const ua = navigator.userAgent;
-    let device = 'Unknown', os = 'Unknown';
-    if (/android/i.test(ua)) device = 'Android Device', os = 'Android';
-    else if (/iphone|ipad|ipod/i.test(ua)) device = 'iPhone/iPad', os = 'iOS';
-    else if (/windows/i.test(ua)) device = 'Windows PC', os = 'Windows';
-    else if (/macintosh|mac os x/i.test(ua)) device = 'Mac', os = 'Mac OS';
-    return { device, os };
-}
-
-// IP-based location
-async function getLocation() {
-    try {
-        const res = await fetch('https://ipapi.co/json/');
-        const data = await res.json();
-        return `${data.city || 'Unknown'}, ${data.region || ''}, ${data.country_name || ''}`;
-    } catch {
-        return 'Unknown';
-    }
-}
-
-// Download APK and track
-document.querySelectorAll('.btn-download').forEach(btn => {
-    btn.addEventListener('click', async function(e){
-        e.preventDefault();
-        
-        const apkId = this.dataset.apkId;
-        const fileName = this.dataset.fileName;
-
-        // Disable button and show loading
-        this.disabled = true;
-        const originalHTML = this.innerHTML;
-        this.innerHTML = '<i class="spinner-border spinner-border-sm" role="status"></i> Downloading...';
-
-        try {
-            const deviceInfo = getDeviceInfo();
-            const location = await getLocation();
-
-            // Send download request to backend
-            const response = await fetch(`{{ url('/apks/download') }}/${apkId}`, {
-                method: 'POST',
-                headers: {
-                    'Content-Type': 'application/json',
-                    'X-CSRF-TOKEN': csrfToken
-                },
-                body: JSON.stringify({
-                    device_name: deviceInfo.device,
-                    os_version: deviceInfo.os,
-                    location: location
-                })
-            });
-
-            if(!response.ok){
-                throw new Error(`HTTP ${response.status}: ${response.statusText}`);
-            }
-
-            // Create blob and download
-            const blob = await response.blob();
-            const url = window.URL.createObjectURL(blob);
-            const a = document.createElement('a');
-            a.href = url;
-            a.download = fileName;
-            a.style.display = 'none';
-            document.body.appendChild(a);
-            a.click();
-            document.body.removeChild(a);
-            window.URL.revokeObjectURL(url);
-
-            // Update download count visually
-            const row = this.closest('.apk-row');
-            const countEl = row.querySelector('.download-count span');
-            if(countEl) {
-                countEl.innerText = parseInt(countEl.innerText) + 1;
-            }
-
-            // Show success message
-            showMessage('Download started successfully!', 'success');
-
-        } catch (error) {
-            console.error('Download error:', error);
-            showMessage('Error downloading file: ' + error.message, 'danger');
-        } finally {
-            // Re-enable button
-            this.disabled = false;
-            this.innerHTML = originalHTML;
-        }
+// Search functionality
+const searchInput = document.getElementById('searchApk');
+if(searchInput){
+    searchInput.addEventListener('input', function(){
+        const query = this.value.toLowerCase();
+        document.querySelectorAll('.apk-row').forEach(row=>{
+            const title = row.querySelector('.fw-semibold').innerText.toLowerCase();
+            const descEl = row.querySelector('.apk-details');
+            const description = descEl ? descEl.innerText.toLowerCase() : '';
+            row.style.display = (title.includes(query) || description.includes(query)) ? '' : 'none';
+        });
     });
-});
+}
 
 // History button functionality
 document.querySelectorAll('.btn-history').forEach(btn => {
@@ -327,36 +409,7 @@ document.querySelectorAll('.btn-history').forEach(btn => {
     });
 });
 
-// Toggle details
-document.querySelectorAll('.toggle-details').forEach(btn=>{
-    btn.addEventListener('click', function(){
-        const details = this.closest('.apk-row').querySelector('.apk-details');
-        if(details){
-            const icon = this.querySelector('i');
-            if(details.style.display === 'none' || !details.style.display){
-                details.style.display = 'block';
-                icon.classList.replace('bi-chevron-down','bi-chevron-up');
-            } else {
-                details.style.display = 'none';
-                icon.classList.replace('bi-chevron-up','bi-chevron-down');
-            }
-        }
-    });
-});
 
-// Search functionality
-const searchInput = document.getElementById('searchApk');
-if(searchInput){
-    searchInput.addEventListener('input', function(){
-        const query = this.value.toLowerCase();
-        document.querySelectorAll('.apk-row').forEach(row=>{
-            const title = row.querySelector('.fw-semibold').innerText.toLowerCase();
-            const descEl = row.querySelector('.apk-details');
-            const description = descEl ? descEl.innerText.toLowerCase() : '';
-            row.style.display = (title.includes(query) || description.includes(query)) ? '' : 'none';
-        });
-    });
-}
 
 // Fetch download history
 async function fetchDownloadHistory(apkId, historyDiv){
@@ -388,23 +441,295 @@ async function fetchDownloadHistory(apkId, historyDiv){
     }
 }
 
-// Show message function
-function showMessage(message, type = 'info') {
+
+// Toggle details
+document.querySelectorAll('.toggle-details').forEach(btn=>{
+    btn.addEventListener('click', function(){
+        const details = this.closest('.apk-row').querySelector('.apk-details');
+        if(details){
+            const icon = this.querySelector('i');
+            if(details.style.display === 'none' || !details.style.display){
+                details.style.display = 'block';
+                icon.classList.replace('bi-chevron-down','bi-chevron-up');
+            } else {
+                details.style.display = 'none';
+                icon.classList.replace('bi-chevron-up','bi-chevron-down');
+            }
+        }
+    });
+});
+
+
+// Enhanced download functionality with progress indicator
+document.querySelectorAll('.btn-download').forEach(btn => {
+    btn.addEventListener('click', async function(e){
+        e.preventDefault();
+        
+        const apkId = this.dataset.apkId;
+        const fileName = this.dataset.fileName;
+        const row = this.closest('.apk-row');
+
+        // Create progress elements
+        const progressContainer = document.createElement('div');
+        progressContainer.className = 'download-progress-container mt-2';
+        progressContainer.innerHTML = `
+            <div class="progress mb-2" style="height: 8px;">
+                <div class="progress-bar bg-success progress-bar-striped progress-bar-animated" 
+                     role="progressbar" style="width: 0%" 
+                     aria-valuenow="0" aria-valuemin="0" aria-valuemax="100">
+                </div>
+            </div>
+            <div class="d-flex justify-content-between">
+                <small class="text-muted download-status">Preparing download...</small>
+                <small class="text-muted download-percentage">0%</small>
+            </div>
+        `;
+
+        // Disable button and show progress
+        this.disabled = true;
+        const originalHTML = this.innerHTML;
+        this.innerHTML = '<i class="spinner-border spinner-border-sm me-1"></i> Downloading...';
+        
+        // Insert progress container after the apk-content div
+        const apkContent = row.querySelector('.apk-content');
+        apkContent.insertAdjacentElement('afterend', progressContainer);
+
+        try {
+            const deviceInfo = getDeviceInfo();
+            const location = await getLocation();
+
+            // Update status
+            updateDownloadStatus(progressContainer, 'Connecting to server...', 5);
+
+            // Create XMLHttpRequest for progress tracking
+            const xhr = new XMLHttpRequest();
+            
+            // Set up progress tracking
+            xhr.addEventListener('progress', function(e) {
+                if (e.lengthComputable) {
+                    const percentComplete = Math.round((e.loaded / e.total) * 100);
+                    updateDownloadProgress(progressContainer, percentComplete, 'Downloading...');
+                }
+            });
+
+            // Handle successful response
+            xhr.addEventListener('load', function() {
+                if (xhr.status === 200) {
+                    updateDownloadStatus(progressContainer, 'Processing file...', 95);
+                    
+                    // Create blob and download
+                    const blob = new Blob([xhr.response], { type: 'application/vnd.android.package-archive' });
+                    const url = window.URL.createObjectURL(blob);
+                    const a = document.createElement('a');
+                    a.href = url;
+                    a.download = fileName;
+                    a.style.display = 'none';
+                    document.body.appendChild(a);
+                    a.click();
+                    document.body.removeChild(a);
+                    window.URL.revokeObjectURL(url);
+
+                    // Update download count visually
+                    const countEl = row.querySelector('.download-count span');
+                    if(countEl) {
+                        countEl.innerText = parseInt(countEl.innerText) + 1;
+                    }
+
+                    // Show completion
+                    updateDownloadStatus(progressContainer, 'Download completed!', 100);
+                    showMessage('Download completed successfully!', 'success');
+                    
+                    // Remove progress after 3 seconds
+                    setTimeout(() => {
+                        progressContainer.remove();
+                    }, 3000);
+
+                } else {
+                    throw new Error(`HTTP ${xhr.status}: ${xhr.statusText}`);
+                }
+            });
+
+            // Handle errors
+            xhr.addEventListener('error', function() {
+                throw new Error('Network error occurred during download');
+            });
+
+            // Handle timeout
+            xhr.addEventListener('timeout', function() {
+                throw new Error('Download timeout - please try again');
+            });
+
+            // Configure and send request
+            xhr.open('POST', `{{ url('/apks/download') }}/${apkId}`, true);
+            xhr.setRequestHeader('Content-Type', 'application/json');
+            xhr.setRequestHeader('X-CSRF-TOKEN', csrfToken);
+            xhr.responseType = 'arraybuffer';
+            xhr.timeout = 300000; // 5 minutes timeout
+
+            // Send request with tracking data
+            xhr.send(JSON.stringify({
+                device_name: deviceInfo.device,
+                os_version: deviceInfo.os,
+                location: location
+            }));
+
+            updateDownloadStatus(progressContainer, 'Starting download...', 10);
+
+        } catch (error) {
+            console.error('Download error:', error);
+            updateDownloadStatus(progressContainer, 'Download failed!', 0, true);
+            showMessage('Error downloading file: ' + error.message, 'danger');
+            
+            // Remove progress after 5 seconds on error
+            setTimeout(() => {
+                progressContainer.remove();
+            }, 5000);
+        } finally {
+            // Re-enable button
+            this.disabled = false;
+            this.innerHTML = originalHTML;
+        }
+    });
+});
+
+// Helper function to update progress bar
+function updateDownloadProgress(container, percentage, status = '') {
+    const progressBar = container.querySelector('.progress-bar');
+    const percentageElement = container.querySelector('.download-percentage');
+    const statusElement = container.querySelector('.download-status');
+    
+    progressBar.style.width = percentage + '%';
+    progressBar.setAttribute('aria-valuenow', percentage);
+    percentageElement.textContent = percentage + '%';
+    
+    if (status) {
+        statusElement.textContent = status;
+    }
+}
+
+// Helper function to update download status
+function updateDownloadStatus(container, status, percentage = null, isError = false) {
+    const statusElement = container.querySelector('.download-status');
+    const progressBar = container.querySelector('.progress-bar');
+    
+    statusElement.textContent = status;
+    
+    if (percentage !== null) {
+        updateDownloadProgress(container, percentage);
+    }
+    
+    if (isError) {
+        progressBar.classList.remove('bg-success');
+        progressBar.classList.add('bg-danger');
+        progressBar.classList.remove('progress-bar-animated');
+    } else if (percentage === 100) {
+        progressBar.classList.remove('progress-bar-animated');
+    }
+}
+
+// Enhanced device/OS detection with more details
+function getDeviceInfo() {
+    const ua = navigator.userAgent;
+    let device = 'Unknown', os = 'Unknown';
+    
+    if (/android/i.test(ua)) {
+        device = 'Android Device';
+        os = 'Android';
+        const match = ua.match(/Android\s([0-9\.]*)/);
+        if (match) os += ' ' + match[1];
+    } else if (/iphone|ipad|ipod/i.test(ua)) {
+        device = /ipad/i.test(ua) ? 'iPad' : 'iPhone';
+        os = 'iOS';
+        const match = ua.match(/OS\s([0-9_]*)/);
+        if (match) os += ' ' + match[1].replace(/_/g, '.');
+    } else if (/windows/i.test(ua)) {
+        device = 'Windows PC';
+        os = 'Windows';
+        if (/Windows NT 10.0/i.test(ua)) os += ' 10';
+        else if (/Windows NT 6.3/i.test(ua)) os += ' 8.1';
+        else if (/Windows NT 6.2/i.test(ua)) os += ' 8';
+        else if (/Windows NT 6.1/i.test(ua)) os += ' 7';
+    } else if (/macintosh|mac os x/i.test(ua)) {
+        device = 'Mac';
+        os = 'macOS';
+        const match = ua.match(/Mac OS X\s([0-9_]*)/);
+        if (match) os += ' ' + match[1].replace(/_/g, '.');
+    }
+    
+    return { device, os };
+}
+
+// Enhanced location detection with fallback
+async function getLocation() {
+    try {
+        const res = await fetch('https://ipapi.co/json/', { timeout: 5000 });
+        const data = await res.json();
+        
+        if (data.error) {
+            throw new Error('Location service error');
+        }
+        
+        const city = data.city || 'Unknown City';
+        const region = data.region || '';
+        const country = data.country_name || 'Unknown Country';
+        
+        return region ? `${city}, ${region}, ${country}` : `${city}, ${country}`;
+    } catch (error) {
+        console.warn('Location detection failed:', error);
+        
+        // Fallback to timezone-based location estimation
+        try {
+            const timezone = Intl.DateTimeFormat().resolvedOptions().timeZone;
+            return `Estimated location (${timezone})`;
+        } catch {
+            return 'Unknown Location';
+        }
+    }
+}
+
+// Enhanced message display with better positioning
+function showMessage(message, type = 'info', duration = 5000) {
+    // Remove any existing messages
+    document.querySelectorAll('.floating-alert').forEach(alert => alert.remove());
+    
     const alertDiv = document.createElement('div');
-    alertDiv.className = `alert alert-${type} alert-dismissible fade show position-fixed`;
-    alertDiv.style.cssText = 'top: 20px; right: 20px; z-index: 9999; min-width: 300px;';
-    alertDiv.innerHTML = `
-        ${message}
-        <button type="button" class="btn-close" data-bs-dismiss="alert"></button>
+    alertDiv.className = `alert alert-${type} alert-dismissible fade show floating-alert`;
+    alertDiv.style.cssText = `
+        position: fixed;
+        top: 20px;
+        right: 20px;
+        z-index: 9999;
+        min-width: 300px;
+        max-width: 400px;
+        box-shadow: 0 4px 12px rgba(0,0,0,0.15);
+        border: none;
+        border-radius: 8px;
     `;
+    
+    alertDiv.innerHTML = `
+        <div class="d-flex align-items-center">
+            <i class="bi ${type === 'success' ? 'bi-check-circle' : type === 'danger' ? 'bi-exclamation-triangle' : 'bi-info-circle'} me-2"></i>
+            <div class="flex-grow-1">${message}</div>
+            <button type="button" class="btn-close" data-bs-dismiss="alert"></button>
+        </div>
+    `;
+    
     document.body.appendChild(alertDiv);
     
-    // Auto remove after 5 seconds
+    // Auto remove after specified duration
     setTimeout(() => {
         if(alertDiv.parentNode) {
-            alertDiv.remove();
+            alertDiv.classList.remove('show');
+            setTimeout(() => alertDiv.remove(), 150);
         }
-    }, 5000);
+    }, duration);
+    
+    // Add click to dismiss
+    alertDiv.addEventListener('click', function(e) {
+        if (e.target.classList.contains('btn-close')) {
+            this.remove();
+        }
+    });
 }
 </script>
 @endsection
