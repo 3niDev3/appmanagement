@@ -30,6 +30,9 @@ Route::prefix('apks')->group(function() {
     Route::post('/download/{apk}', [ProjectPublicController::class,'apiDownload'])->name('apks.download');
     Route::get('/history/{apk}', [ProjectPublicController::class,'apiDownloadHistory'])->name('apks.history');
     Route::get('/stats', [ProjectPublicController::class,'apiStats'])->name('apks.stats');
+
+    // Route::delete('/delete/{apk}', [ProjectPublicController::class, 'apiDelete'])->name('apks.delete');
+
 });
 
 // -----------------------------
@@ -42,4 +45,6 @@ Route::prefix('{project_slug}')->group(function () {
     Route::get('upload', [ProjectPublicController::class, 'uploadForm'])->name('project.uploadForm');
     Route::post('upload-login', [ProjectPublicController::class, 'loginAndUpload'])->name('project.loginAndUpload');
     Route::post('upload', [ProjectPublicController::class, 'uploadStore'])->name('project.uploadStore');
+
+
 });

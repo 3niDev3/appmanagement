@@ -24,7 +24,7 @@
 
         @forelse($users as $user)
             <div class="project-row"> {{-- same row style --}}
-                <div class="project-id">{{ $user->id }}</div>
+                <div class="project-id">{{ $loop->iteration }}</div>
                 <div class="project-name">{{ $user->name }}</div>
                 <div class="project-name">{{ $user->email }}</div>
                 <div class="project-name">{{ $user->projects->pluck('name')->implode(', ') }}</div>

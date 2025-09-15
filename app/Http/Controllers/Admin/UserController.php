@@ -65,7 +65,7 @@ class UserController extends Controller
 
         $user->name = $request->name;
         $user->email = $request->email;
-        $user->can_upload = $request->has('can_upload');
+        $user->can_upload = $request->boolean('can_upload');
 
         if ($request->filled('password')) {
             $user->password = Hash::make($request->password);

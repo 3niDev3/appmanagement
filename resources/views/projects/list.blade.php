@@ -120,9 +120,9 @@
             <div class="text-center p-5 text-muted">
                 <i class="bi bi-exclamation-circle fs-1 mb-3"></i>
                 <p>No APKs uploaded yet.</p>
-                <a href="{{ route('project.uploadForm', $project->slug) }}" class="btn btn-primary">
+                {{-- <a href="{{ route('project.uploadForm', $project->slug) }}" class="btn btn-primary">
                     <i class="bi bi-upload me-2"></i>Upload First APK
-                </a>
+                </a> --}}
             </div>
         @endforelse
     @endif
@@ -380,6 +380,7 @@
 <script>
 const csrfToken = '{{ csrf_token() }}';
 
+
 // Search functionality
 const searchInput = document.getElementById('searchApk');
 if(searchInput){
@@ -462,135 +463,180 @@ document.querySelectorAll('.toggle-details').forEach(btn=>{
 
 // Enhanced download functionality with progress indicator
 document.querySelectorAll('.btn-download').forEach(btn => {
-    btn.addEventListener('click', async function(e){
+    btn.addEventListener('click', async function(e) {
         e.preventDefault();
-        
+
         const apkId = this.dataset.apkId;
         const fileName = this.dataset.fileName;
         const row = this.closest('.apk-row');
 
-        // Create progress elements
+        // Create progress container
         const progressContainer = document.createElement('div');
         progressContainer.className = 'download-progress-container mt-2';
         progressContainer.innerHTML = `
             <div class="progress mb-2" style="height: 8px;">
                 <div class="progress-bar bg-success progress-bar-striped progress-bar-animated" 
                      role="progressbar" style="width: 0%" 
-                     aria-valuenow="0" aria-valuemin="0" aria-valuemax="100">
-                </div>
+                     aria-valuenow="0" aria-valuemin="0" aria-valuemax="100"></div>
             </div>
-            <div class="d-flex justify-content-between">
+            <div class="d-flex justify-content-between mb-2">
                 <small class="text-muted download-status">Preparing download...</small>
                 <small class="text-muted download-percentage">0%</small>
             </div>
         `;
 
-        // Disable button and show progress
-        this.disabled = true;
-        const originalHTML = this.innerHTML;
-        this.innerHTML = '<i class="spinner-border spinner-border-sm me-1"></i> Downloading...';
-        
-        // Insert progress container after the apk-content div
+        // Insert after apk-content
         const apkContent = row.querySelector('.apk-content');
         apkContent.insertAdjacentElement('afterend', progressContainer);
 
-        try {
-            const deviceInfo = getDeviceInfo();
-            const location = await getLocation();
+        // Add Pause, Resume, Cancel buttons
+        const pauseBtn = document.createElement('button');
+        pauseBtn.textContent = 'Pause';
+        pauseBtn.className = 'btn btn-warning btn-sm me-2';
+        const resumeBtn = document.createElement('button');
+        resumeBtn.textContent = 'Resume';
+        resumeBtn.className = 'btn btn-info btn-sm me-2';
+        resumeBtn.style.display = 'none';
+        const cancelBtn = document.createElement('button');
+        cancelBtn.textContent = 'Cancel';
+        cancelBtn.className = 'btn btn-danger btn-sm';
+        progressContainer.append(pauseBtn, resumeBtn, cancelBtn);
 
-            // Update status
-            updateDownloadStatus(progressContainer, 'Connecting to server...', 5);
+        // Disable main download button
+        const originalHTML = this.innerHTML;
+        this.disabled = true;
+        this.innerHTML = '<i class="spinner-border spinner-border-sm me-1"></i> Downloading...';
 
-            // Create XMLHttpRequest for progress tracking
-            const xhr = new XMLHttpRequest();
-            
-            // Set up progress tracking
-            xhr.addEventListener('progress', function(e) {
-                if (e.lengthComputable) {
-                    const percentComplete = Math.round((e.loaded / e.total) * 100);
-                    updateDownloadProgress(progressContainer, percentComplete, 'Downloading...');
-                }
-            });
+        const progressBar = progressContainer.querySelector('.progress-bar');
+        const statusText = progressContainer.querySelector('.download-status');
+        const percentText = progressContainer.querySelector('.download-percentage');
 
-            // Handle successful response
-            xhr.addEventListener('load', function() {
-                if (xhr.status === 200) {
-                    updateDownloadStatus(progressContainer, 'Processing file...', 95);
-                    
-                    // Create blob and download
-                    const blob = new Blob([xhr.response], { type: 'application/vnd.android.package-archive' });
-                    const url = window.URL.createObjectURL(blob);
-                    const a = document.createElement('a');
-                    a.href = url;
-                    a.download = fileName;
-                    a.style.display = 'none';
-                    document.body.appendChild(a);
-                    a.click();
-                    document.body.removeChild(a);
-                    window.URL.revokeObjectURL(url);
+        let xhr = null;
+        let paused = false;
+        let receivedBytes = 0;
+        let totalBytes = 0;
+        let blobParts = [];
 
-                    // Update download count visually
-                    const countEl = row.querySelector('.download-count span');
-                    if(countEl) {
-                        countEl.innerText = parseInt(countEl.innerText) + 1;
+        const updateProgress = (loaded, total, status = 'Downloading...') => {
+            const percent = total ? Math.floor((loaded / total) * 100) : 0;
+            progressBar.style.width = percent + '%';
+            progressBar.setAttribute('aria-valuenow', percent);
+            statusText.innerText = status;
+            percentText.innerText = percent + '%';
+        };
+
+        const startDownload = async (rangeStart = 0) => {
+            try {
+                const deviceInfo = getDeviceInfo();
+                const location = await getLocation();
+
+                xhr = new XMLHttpRequest();
+                xhr.open('POST', `{{ url('/apks/download') }}/${apkId}`, true);
+                xhr.setRequestHeader('Content-Type', 'application/json');
+                xhr.setRequestHeader('X-CSRF-TOKEN', csrfToken);
+                if (rangeStart > 0) xhr.setRequestHeader('Range', `bytes=${rangeStart}-`);
+                xhr.responseType = 'arraybuffer';
+                xhr.timeout = 300000;
+
+                xhr.onprogress = function(e) {
+                    if (e.lengthComputable) {
+                        totalBytes = e.total + rangeStart;
+                        receivedBytes = e.loaded + rangeStart;
+                        updateProgress(receivedBytes, totalBytes);
                     }
+                };
 
-                    // Show completion
-                    updateDownloadStatus(progressContainer, 'Download completed!', 100);
-                    showMessage('Download completed successfully!', 'success');
-                    
-                    // Remove progress after 3 seconds
-                    setTimeout(() => {
-                        progressContainer.remove();
-                    }, 3000);
+                xhr.onload = function() {
+                    if (xhr.status === 200 || xhr.status === 206) {
+                        blobParts.push(xhr.response);
 
-                } else {
-                    throw new Error(`HTTP ${xhr.status}: ${xhr.statusText}`);
-                }
-            });
+                        // Download the file
+                        const blob = new Blob(blobParts, { type: 'application/vnd.android.package-archive' });
+                        const url = window.URL.createObjectURL(blob);
+                        const a = document.createElement('a');
+                        a.href = url;
+                        a.download = fileName;
+                        document.body.appendChild(a);
+                        a.click();
+                        a.remove();
+                        window.URL.revokeObjectURL(url);
 
-            // Handle errors
-            xhr.addEventListener('error', function() {
-                throw new Error('Network error occurred during download');
-            });
+                        updateProgress(totalBytes, totalBytes, 'Download Completed!');
+                        showMessage('Download completed successfully!', 'success');
 
-            // Handle timeout
-            xhr.addEventListener('timeout', function() {
-                throw new Error('Download timeout - please try again');
-            });
+                        // Increment download count
+                        const countEl = row.querySelector('.download-count span');
+                        if(countEl) countEl.innerText = parseInt(countEl.innerText) + 1;
 
-            // Configure and send request
-            xhr.open('POST', `{{ url('/apks/download') }}/${apkId}`, true);
-            xhr.setRequestHeader('Content-Type', 'application/json');
-            xhr.setRequestHeader('X-CSRF-TOKEN', csrfToken);
-            xhr.responseType = 'arraybuffer';
-            xhr.timeout = 300000; // 5 minutes timeout
+                        // Cleanup
+                        pauseBtn.remove();
+                        resumeBtn.remove();
+                        cancelBtn.remove();
+                        setTimeout(() => progressContainer.remove(), 3000);
+                        btn.disabled = false;
+                        btn.innerHTML = originalHTML;
+                    } else {
+                        updateProgress(receivedBytes, totalBytes, 'Download failed!');
+                        showMessage('Download failed!', 'danger');
+                        btn.disabled = false;
+                        btn.innerHTML = originalHTML;
+                    }
+                };
 
-            // Send request with tracking data
-            xhr.send(JSON.stringify({
-                device_name: deviceInfo.device,
-                os_version: deviceInfo.os,
-                location: location
-            }));
+                xhr.onerror = xhr.ontimeout = function() {
+                    updateProgress(receivedBytes, totalBytes, 'Download failed!');
+                    showMessage('Download error or timeout!', 'danger');
+                    btn.disabled = false;
+                    btn.innerHTML = originalHTML;
+                };
 
-            updateDownloadStatus(progressContainer, 'Starting download...', 10);
+                xhr.send(JSON.stringify({
+                    device_name: deviceInfo.device,
+                    os_version: deviceInfo.os,
+                    location: location
+                }));
 
-        } catch (error) {
-            console.error('Download error:', error);
-            updateDownloadStatus(progressContainer, 'Download failed!', 0, true);
-            showMessage('Error downloading file: ' + error.message, 'danger');
-            
-            // Remove progress after 5 seconds on error
-            setTimeout(() => {
-                progressContainer.remove();
-            }, 5000);
-        } finally {
-            // Re-enable button
-            this.disabled = false;
-            this.innerHTML = originalHTML;
-        }
+                updateProgress(receivedBytes, totalBytes, 'Starting download...');
+            } catch (err) {
+                console.error(err);
+                updateProgress(receivedBytes, totalBytes, 'Download failed!');
+                btn.disabled = false;
+                btn.innerHTML = originalHTML;
+            }
+        };
+
+        // Start initial download
+        startDownload();
+
+        pauseBtn.addEventListener('click', function() {
+            if(xhr) {
+                xhr.abort();
+                paused = true;
+                pauseBtn.style.display = 'none';
+                resumeBtn.style.display = 'inline-block';
+                updateProgress(receivedBytes, totalBytes, 'Paused');
+            }
+        });
+
+        resumeBtn.addEventListener('click', function() {
+            if(paused) {
+                paused = false;
+                pauseBtn.style.display = 'inline-block';
+                resumeBtn.style.display = 'none';
+                startDownload(receivedBytes);
+            }
+        });
+
+        cancelBtn.addEventListener('click', function() {
+            if(xhr) xhr.abort();
+            progressContainer.remove();
+            showMessage('Download canceled', 'danger');
+            btn.disabled = false;
+            btn.innerHTML = originalHTML;
+        });
     });
 });
+
 
 // Helper function to update progress bar
 function updateDownloadProgress(container, percentage, status = '') {
@@ -731,5 +777,9 @@ function showMessage(message, type = 'info', duration = 5000) {
         }
     });
 }
+
+
+
+
 </script>
 @endsection

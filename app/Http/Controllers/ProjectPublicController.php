@@ -290,4 +290,31 @@ class ProjectPublicController extends Controller
             ], 500);
         }
     }
+
+    
+
+
+//     public function apiDelete($apkId)
+// {
+//     // Check if user is admin — adjust based on your auth system
+//     if (!auth()->check() || !auth()->user()->isAdmin()) {
+//         return response()->json(['error' => 'Unauthorized'], 403);
+//     }
+
+//     $apk = ProjectApk::find($apkId);
+//     if (!$apk) {
+//         return response()->json(['error' => 'APK not found'], 404);
+//     }
+
+//     try {
+//         $apk->delete(); // Soft delete or hard delete, depending on your model
+
+//         return response()->json(['message' => 'APK deleted successfully']);
+//     } catch (\Exception $e) {
+//         return response()->json(['error' => 'Failed to delete APK'], 500);
+//     }
+// }
+
+
+    
 }
