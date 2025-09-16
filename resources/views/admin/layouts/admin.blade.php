@@ -113,17 +113,6 @@
             });
         }, 5000);
 
-        // Add loading state to buttons
-        document.querySelectorAll('form').forEach(form => {
-            form.addEventListener('submit', function() {
-                const submitBtn = this.querySelector('button[type="submit"]');
-                if (submitBtn) {
-                    submitBtn.disabled = true;
-                    submitBtn.innerHTML = '<i class="fas fa-spinner fa-spin me-2"></i>Processing...';
-                }
-            });
-        });
-
         // Confirm delete actions
         document.querySelectorAll('.btn-danger').forEach(btn => {
             if (btn.textContent.includes('Delete') || btn.innerHTML.includes('fa-trash')) {
