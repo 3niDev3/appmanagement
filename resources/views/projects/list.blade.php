@@ -277,6 +277,10 @@
     color: #28a745;
     font-family: 'Courier New', monospace;
 }
+.bg-primary{
+    background :black !important;
+    color: white !important;
+}
 
 /* Enhanced floating alerts */
 .floating-alert {
