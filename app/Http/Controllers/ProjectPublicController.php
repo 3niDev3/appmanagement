@@ -213,14 +213,11 @@ class ProjectPublicController extends Controller
                 return response()->json(['status'=>'error','message'=>'Physical file not found'], 404);
             }
 
-            // Increment download count
-            $apk->increment('download_count');
-
-            // Track download details
+            // Track download attempt (before actual download)
             try {
                 ApkDownload::create([
                     'apk_id'     => $apk->id,
-                    'user_id'    => auth()->id(), // can be null if guest
+                    'user_id'    => auth()->id(),
                     'device_name'=> $request->input('device_name', 'Unknown'),
                     'os_version' => $request->input('os_version', 'Unknown'),
                     'location'   => $request->input('location', 'Unknown'),
@@ -228,12 +225,13 @@ class ProjectPublicController extends Controller
                 ]);
             } catch (\Exception $e) {
                 Log::error('Failed to save download history: ' . $e->getMessage());
-                // Continue with download even if history saving fails
             }
+
+            // Increment download count only after successful file serving
+            $apk->increment('download_count');
 
             Log::info('Serving file download: ' . $apk->filename);
 
-            // Return the file download response
             return response()->download($fullPath, $apk->filename, [
                 'Content-Type' => 'application/vnd.android.package-archive',
                 'Content-Disposition' => 'attachment; filename="' . $apk->filename . '"'
@@ -290,31 +288,5 @@ class ProjectPublicController extends Controller
             ], 500);
         }
     }
-
-    
-
-
-//     public function apiDelete($apkId)
-// {
-//     // Check if user is admin — adjust based on your auth system
-//     if (!auth()->check() || !auth()->user()->isAdmin()) {
-//         return response()->json(['error' => 'Unauthorized'], 403);
-//     }
-
-//     $apk = ProjectApk::find($apkId);
-//     if (!$apk) {
-//         return response()->json(['error' => 'APK not found'], 404);
-//     }
-
-//     try {
-//         $apk->delete(); // Soft delete or hard delete, depending on your model
-
-//         return response()->json(['message' => 'APK deleted successfully']);
-//     } catch (\Exception $e) {
-//         return response()->json(['error' => 'Failed to delete APK'], 500);
-//     }
-// }
-
-
     
 }

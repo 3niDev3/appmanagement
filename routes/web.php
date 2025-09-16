@@ -30,9 +30,6 @@ Route::prefix('apks')->group(function() {
     Route::post('/download/{apk}', [ProjectPublicController::class,'apiDownload'])->name('apks.download');
     Route::get('/history/{apk}', [ProjectPublicController::class,'apiDownloadHistory'])->name('apks.history');
     Route::get('/stats', [ProjectPublicController::class,'apiStats'])->name('apks.stats');
-
-    // Route::delete('/delete/{apk}', [ProjectPublicController::class, 'apiDelete'])->name('apks.delete');
-
 });
 
 // -----------------------------

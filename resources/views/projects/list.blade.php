@@ -375,409 +375,511 @@
         font-size: 0.9rem;
     }
 }
+
+
 </style>
 
 <script>
 const csrfToken = '{{ csrf_token() }}';
+        const searchInput = document.getElementById('searchApk');
+            if(searchInput){
+                searchInput.addEventListener('input', function(){
+                    const query = this.value.toLowerCase();
+                    document.querySelectorAll('.apk-row').forEach(row=>{
+                        const title = row.querySelector('.fw-semibold').innerText.toLowerCase();
+                        const descEl = row.querySelector('.apk-details');
+                        const description = descEl ? descEl.innerText.toLowerCase() : '';
+                        row.style.display = (title.includes(query) || description.includes(query)) ? '' : 'none';
+                    });
+                });
+            }
 
-
-// Search functionality
-const searchInput = document.getElementById('searchApk');
-if(searchInput){
-    searchInput.addEventListener('input', function(){
-        const query = this.value.toLowerCase();
-        document.querySelectorAll('.apk-row').forEach(row=>{
-            const title = row.querySelector('.fw-semibold').innerText.toLowerCase();
-            const descEl = row.querySelector('.apk-details');
-            const description = descEl ? descEl.innerText.toLowerCase() : '';
-            row.style.display = (title.includes(query) || description.includes(query)) ? '' : 'none';
-        });
-    });
-}
-
-// History button functionality
-document.querySelectorAll('.btn-history').forEach(btn => {
-    btn.addEventListener('click', function() {
-        const apkId = this.dataset.apkId;
-        const row = this.closest('.apk-row');
-        const historyDiv = row.querySelector('.download-history');
-        
-        if(historyDiv.style.display === 'none' || !historyDiv.style.display) {
-            fetchDownloadHistory(apkId, historyDiv);
-        } else {
-            historyDiv.style.display = 'none';
-        }
-    });
-});
-
-
-
-// Fetch download history
-async function fetchDownloadHistory(apkId, historyDiv){
-    try {
-        const res = await fetch(`{{ url('/apks/history') }}/${apkId}`);
-        if(!res.ok) throw new Error('Failed to fetch history');
-        
-        const data = await res.json();
-
-        let html = '<h5>Download History</h5>';
-        if(data.length > 0){
-            data.forEach(item=>{
-                const date = new Date(item.created_at).toLocaleString();
-                html += `<div class="border-bottom py-2">
-                    <div><strong>Device:</strong> ${item.device_name || 'Unknown'}</div>
-                    <div><strong>OS:</strong> ${item.os_version || 'Unknown'}</div>
-                    <div><strong>Location:</strong> ${item.location || 'Unknown'}</div>
-                    <div><strong>Downloaded:</strong> ${date}</div>
-                </div>`;
+        // History button functionality
+        document.querySelectorAll('.btn-history').forEach(btn => {
+            btn.addEventListener('click', function() {
+                const apkId = this.dataset.apkId;
+                const row = this.closest('.apk-row');
+                const historyDiv = row.querySelector('.download-history');
+                
+                if(historyDiv.style.display === 'none' || !historyDiv.style.display) {
+                    fetchDownloadHistory(apkId, historyDiv);
+                } else {
+                    historyDiv.style.display = 'none';
+                }
             });
-        } else {
-            html += '<div class="text-muted">No download history available</div>';
-        }
-        historyDiv.innerHTML = html;
-        historyDiv.style.display = 'block';
-    } catch(error) {
-        historyDiv.innerHTML = '<h5>Download History</h5><div class="text-danger">Error loading history</div>';
-        historyDiv.style.display = 'block';
-    }
-}
+        });
 
+        // Fetch download history
+        async function fetchDownloadHistory(apkId, historyDiv){
+            try {
+                const res = await fetch(`{{ url('/apks/history') }}/${apkId}`);
+                if(!res.ok) throw new Error('Failed to fetch history');
+                
+                const data = await res.json();
 
-// Toggle details
-document.querySelectorAll('.toggle-details').forEach(btn=>{
-    btn.addEventListener('click', function(){
-        const details = this.closest('.apk-row').querySelector('.apk-details');
-        if(details){
-            const icon = this.querySelector('i');
-            if(details.style.display === 'none' || !details.style.display){
-                details.style.display = 'block';
-                icon.classList.replace('bi-chevron-down','bi-chevron-up');
-            } else {
-                details.style.display = 'none';
-                icon.classList.replace('bi-chevron-up','bi-chevron-down');
+                let html = '<h5>Download History</h5>';
+                if(data.length > 0){
+                    data.forEach(item=>{
+                        const date = new Date(item.created_at).toLocaleString();
+                        html += `<div class="border-bottom py-2">
+                            <div><strong>Device:</strong> ${item.device_name || 'Unknown'}</div>
+                            <div><strong>OS:</strong> ${item.os_version || 'Unknown'}</div>
+                            <div><strong>Location:</strong> ${item.location || 'Unknown'}</div>
+                            <div><strong>Downloaded:</strong> ${date}</div>
+                        </div>`;
+                    });
+                } else {
+                    html += '<div class="text-muted">No download history available</div>';
+                }
+                historyDiv.innerHTML = html;
+                historyDiv.style.display = 'block';
+            } catch(error) {
+                historyDiv.innerHTML = '<h5>Download History</h5><div class="text-danger">Error loading history</div>';
+                historyDiv.style.display = 'block';
             }
         }
-    });
-});
 
 
-// Enhanced download functionality with progress indicator
-document.querySelectorAll('.btn-download').forEach(btn => {
-    btn.addEventListener('click', async function(e) {
-        e.preventDefault();
+        // Toggle details
+        document.querySelectorAll('.toggle-details').forEach(btn=>{
+            btn.addEventListener('click', function(){
+                const details = this.closest('.apk-row').querySelector('.apk-details');
+                if(details){
+                    const icon = this.querySelector('i');
+                    if(details.style.display === 'none' || !details.style.display){
+                        details.style.display = 'block';
+                        icon.classList.replace('bi-chevron-down','bi-chevron-up');
+                    } else {
+                        details.style.display = 'none';
+                        icon.classList.replace('bi-chevron-up','bi-chevron-down');
+                    }
+                }
+            });
+        });
 
-        const apkId = this.dataset.apkId;
-        const fileName = this.dataset.fileName;
-        const row = this.closest('.apk-row');
 
-        // Create progress container
-        const progressContainer = document.createElement('div');
-        progressContainer.className = 'download-progress-container mt-2';
-        progressContainer.innerHTML = `
-            <div class="progress mb-2" style="height: 8px;">
-                <div class="progress-bar bg-success progress-bar-striped progress-bar-animated" 
-                     role="progressbar" style="width: 0%" 
-                     aria-valuenow="0" aria-valuemin="0" aria-valuemax="100"></div>
-            </div>
-            <div class="d-flex justify-content-between mb-2">
-                <small class="text-muted download-status">Preparing download...</small>
-                <small class="text-muted download-percentage">0%</small>
-            </div>
-        `;
+        // Download state management
+        class DownloadManager {
+            constructor() {
+                this.activeDownloads = new Map();
+            }
 
-        // Insert after apk-content
-        const apkContent = row.querySelector('.apk-content');
-        apkContent.insertAdjacentElement('afterend', progressContainer);
+            createDownload(apkId, fileName, downloadBtn, row) {
+                const download = {
+                    id: apkId,
+                    fileName: fileName,
+                    button: downloadBtn,
+                    row: row,
+                    xhr: null,
+                    isPaused: false,
+                    isCancelled: false,
+                    isCompleted: false,
+                    receivedBytes: 0,
+                    totalBytes: 0,
+                    progressContainer: null,
+                    blobParts: []
+                };
 
-        // Add Pause, Resume, Cancel buttons
-        const pauseBtn = document.createElement('button');
-        pauseBtn.textContent = 'Pause';
-        pauseBtn.className = 'btn btn-warning btn-sm me-2';
-        const resumeBtn = document.createElement('button');
-        resumeBtn.textContent = 'Resume';
-        resumeBtn.className = 'btn btn-info btn-sm me-2';
-        resumeBtn.style.display = 'none';
-        const cancelBtn = document.createElement('button');
-        cancelBtn.textContent = 'Cancel';
-        cancelBtn.className = 'btn btn-danger btn-sm';
-        progressContainer.append(pauseBtn, resumeBtn, cancelBtn);
+                this.activeDownloads.set(apkId, download);
+                return download;
+            }
 
-        // Disable main download button
-        const originalHTML = this.innerHTML;
-        this.disabled = true;
-        this.innerHTML = '<i class="spinner-border spinner-border-sm me-1"></i> Downloading...';
+            getDownload(apkId) {
+                return this.activeDownloads.get(apkId);
+            }
 
-        const progressBar = progressContainer.querySelector('.progress-bar');
-        const statusText = progressContainer.querySelector('.download-status');
-        const percentText = progressContainer.querySelector('.download-percentage');
+            removeDownload(apkId) {
+                const download = this.activeDownloads.get(apkId);
+                if (download && download.xhr) {
+                    download.xhr.abort();
+                }
+                this.activeDownloads.delete(apkId);
+            }
 
-        let xhr = null;
-        let paused = false;
-        let receivedBytes = 0;
-        let totalBytes = 0;
-        let blobParts = [];
+            isDownloading(apkId) {
+                const download = this.activeDownloads.get(apkId);
+                return download && !download.isCompleted && !download.isCancelled;
+            }
+        }
 
-        const updateProgress = (loaded, total, status = 'Downloading...') => {
-            const percent = total ? Math.floor((loaded / total) * 100) : 0;
-            progressBar.style.width = percent + '%';
-            progressBar.setAttribute('aria-valuenow', percent);
-            statusText.innerText = status;
-            percentText.innerText = percent + '%';
-        };
+        const downloadManager = new DownloadManager();
 
-        const startDownload = async (rangeStart = 0) => {
+        // Enhanced download functionality with proper state management
+        document.querySelectorAll('.btn-download').forEach(btn => {
+            btn.addEventListener('click', async function(e) {
+                e.preventDefault();
+
+                const apkId = this.dataset.apkId;
+                const fileName = this.dataset.fileName;
+                const row = this.closest('.apk-row');
+
+                // Check if already downloading
+                if (downloadManager.isDownloading(apkId)) {
+                    showMessage('Download already in progress', 'warning');
+                    return;
+                }
+
+                // Create download instance
+                const download = downloadManager.createDownload(apkId, fileName, this, row);
+                
+                // Create and show progress container
+                createProgressContainer(download);
+                
+                // Start download
+                await startDownload(download);
+            });
+        });
+
+        function createProgressContainer(download) {
+            const progressContainer = document.createElement('div');
+            progressContainer.className = 'download-progress-container';
+            progressContainer.innerHTML = `
+                <div class="d-flex justify-content-between align-items-center mb-2">
+                    <span class="fw-semibold text-dark">Downloading ${download.fileName}</span>
+                    <span class="badge bg-primary download-percentage">0%</span>
+                </div>
+                <div class="progress mb-2">
+                    <div class="progress-bar bg-success progress-bar-striped progress-bar-animated" 
+                         role="progressbar" style="width: 0%" 
+                         aria-valuenow="0" aria-valuemin="0" aria-valuemax="100"></div>
+                </div>
+                <div class="d-flex justify-content-between mb-2">
+                    <small class="text-muted download-status">Preparing download...</small>
+                    <small class="text-muted download-speed">0 KB/s</small>
+                </div>
+                <div class="download-controls">
+                    <button class="btn btn-warning btn-sm btn-pause">
+                        <i class="bi bi-pause-fill"></i> Pause
+                    </button>
+                    <button class="btn btn-danger btn-sm btn-cancel">
+                        <i class="bi bi-x-circle-fill"></i> Cancel
+                    </button>
+                </div>
+            `;
+
+            download.progressContainer = progressContainer;
+            const apkContent = download.row.querySelector('.apk-content');
+            apkContent.insertAdjacentElement('afterend', progressContainer);
+
+            // Setup control event listeners
+            setupDownloadControls(download);
+
+            // Disable main download button
+            download.button.disabled = true;
+            download.button.innerHTML = '<i class="spinner-border spinner-border-sm me-1"></i> Downloading...';
+        }
+
+        function setupDownloadControls(download) {
+            const pauseBtn = download.progressContainer.querySelector('.btn-pause');
+            const cancelBtn = download.progressContainer.querySelector('.btn-cancel');
+
+            pauseBtn.addEventListener('click', () => togglePause(download));
+            cancelBtn.addEventListener('click', () => cancelDownload(download));
+        }
+
+        async function startDownload(download, rangeStart = 0) {
+            if (download.isCancelled) return;
+
             try {
                 const deviceInfo = getDeviceInfo();
                 const location = await getLocation();
 
-                xhr = new XMLHttpRequest();
-                xhr.open('POST', `{{ url('/apks/download') }}/${apkId}`, true);
-                xhr.setRequestHeader('Content-Type', 'application/json');
-                xhr.setRequestHeader('X-CSRF-TOKEN', csrfToken);
-                if (rangeStart > 0) xhr.setRequestHeader('Range', `bytes=${rangeStart}-`);
+                const xhr = new XMLHttpRequest();
+                download.xhr = xhr;
+
+                xhr.open('GET', createDownloadUrl(download.id), true);
+                if (rangeStart > 0) {
+                    xhr.setRequestHeader('Range', `bytes=${rangeStart}-`);
+                }
                 xhr.responseType = 'arraybuffer';
                 xhr.timeout = 300000;
 
+                let startTime = Date.now();
+                let lastLoaded = rangeStart;
+
                 xhr.onprogress = function(e) {
-                    if (e.lengthComputable) {
-                        totalBytes = e.total + rangeStart;
-                        receivedBytes = e.loaded + rangeStart;
-                        updateProgress(receivedBytes, totalBytes);
+                    if (e.lengthComputable && !download.isPaused) {
+                        download.totalBytes = e.total + rangeStart;
+                        download.receivedBytes = e.loaded + rangeStart;
+                        
+                        // Calculate speed
+                        const currentTime = Date.now();
+                        const timeDiff = (currentTime - startTime) / 1000;
+                        const bytesDiff = e.loaded - (lastLoaded - rangeStart);
+                        const speed = timeDiff > 0 ? bytesDiff / timeDiff : 0;
+                        
+                        updateProgress(download, download.receivedBytes, download.totalBytes, formatSpeed(speed));
                     }
                 };
 
                 xhr.onload = function() {
                     if (xhr.status === 200 || xhr.status === 206) {
-                        blobParts.push(xhr.response);
-
-                        // Download the file
-                        const blob = new Blob(blobParts, { type: 'application/vnd.android.package-archive' });
-                        const url = window.URL.createObjectURL(blob);
-                        const a = document.createElement('a');
-                        a.href = url;
-                        a.download = fileName;
-                        document.body.appendChild(a);
-                        a.click();
-                        a.remove();
-                        window.URL.revokeObjectURL(url);
-
-                        updateProgress(totalBytes, totalBytes, 'Download Completed!');
-                        showMessage('Download completed successfully!', 'success');
-
-                        // Increment download count
-                        const countEl = row.querySelector('.download-count span');
-                        if(countEl) countEl.innerText = parseInt(countEl.innerText) + 1;
-
-                        // Cleanup
-                        pauseBtn.remove();
-                        resumeBtn.remove();
-                        cancelBtn.remove();
-                        setTimeout(() => progressContainer.remove(), 3000);
-                        btn.disabled = false;
-                        btn.innerHTML = originalHTML;
+                        if (!download.isCancelled) {
+                            download.blobParts.push(xhr.response);
+                            completeDownload(download);
+                        }
                     } else {
-                        updateProgress(receivedBytes, totalBytes, 'Download failed!');
-                        showMessage('Download failed!', 'danger');
-                        btn.disabled = false;
-                        btn.innerHTML = originalHTML;
+                        failDownload(download, 'Server error: ' + xhr.status);
                     }
                 };
 
-                xhr.onerror = xhr.ontimeout = function() {
-                    updateProgress(receivedBytes, totalBytes, 'Download failed!');
-                    showMessage('Download error or timeout!', 'danger');
-                    btn.disabled = false;
-                    btn.innerHTML = originalHTML;
-                };
+                xhr.onerror = () => failDownload(download, 'Network error occurred');
+                xhr.ontimeout = () => failDownload(download, 'Download timeout');
 
-                xhr.send(JSON.stringify({
-                    device_name: deviceInfo.device,
-                    os_version: deviceInfo.os,
-                    location: location
-                }));
+                xhr.send();
+                updateDownloadStatus(download, 'Starting download...');
 
-                updateProgress(receivedBytes, totalBytes, 'Starting download...');
-            } catch (err) {
-                console.error(err);
-                updateProgress(receivedBytes, totalBytes, 'Download failed!');
-                btn.disabled = false;
-                btn.innerHTML = originalHTML;
+            } catch (error) {
+                failDownload(download, 'Failed to start download: ' + error.message);
             }
-        };
+        }
 
-        // Start initial download
-        startDownload();
+        function togglePause(download) {
+            const pauseBtn = download.progressContainer.querySelector('.btn-pause');
+            const progressBar = download.progressContainer.querySelector('.progress-bar');
 
-        pauseBtn.addEventListener('click', function() {
-            if(xhr) {
-                xhr.abort();
-                paused = true;
-                pauseBtn.style.display = 'none';
-                resumeBtn.style.display = 'inline-block';
-                updateProgress(receivedBytes, totalBytes, 'Paused');
+            if (!download.isPaused) {
+                // Pause download
+                if (download.xhr) {
+                    download.xhr.abort();
+                }
+                download.isPaused = true;
+                pauseBtn.innerHTML = '<i class="bi bi-play-fill"></i> Resume';
+                progressBar.classList.add('paused');
+                updateDownloadStatus(download, 'Paused');
+                showMessage('Download paused', 'info');
+            } else {
+                // Resume download
+                download.isPaused = false;
+                pauseBtn.innerHTML = '<i class="bi bi-pause-fill"></i> Pause';
+                progressBar.classList.remove('paused');
+                updateDownloadStatus(download, 'Resuming...');
+                startDownload(download, download.receivedBytes);
+                showMessage('Download resumed', 'info');
             }
-        });
+        }
 
-        resumeBtn.addEventListener('click', function() {
-            if(paused) {
-                paused = false;
-                pauseBtn.style.display = 'inline-block';
-                resumeBtn.style.display = 'none';
-                startDownload(receivedBytes);
+        function cancelDownload(download) {
+            download.isCancelled = true;
+            
+            if (download.xhr) {
+                download.xhr.abort();
             }
+
+            // Clean up UI
+            if (download.progressContainer) {
+                download.progressContainer.remove();
+            }
+            
+            // Reset download button
+            download.button.disabled = false;
+            download.button.innerHTML = '<i class="bi bi-download"></i> Download';
+            
+            // Remove from manager
+            downloadManager.removeDownload(download.id);
+            
+            showMessage('Download cancelled', 'warning');
+        }
+
+        function completeDownload(download) {
+            download.isCompleted = true;
+            
+            try {
+                // Create and download blob
+                const blob = new Blob(download.blobParts, { 
+                    type: 'application/vnd.android.package-archive' 
+                });
+                const url = window.URL.createObjectURL(blob);
+                const a = document.createElement('a');
+                a.href = url;
+                a.download = download.fileName;
+                document.body.appendChild(a);
+                a.click();
+                a.remove();
+                window.URL.revokeObjectURL(url);
+
+                // Update UI
+                const progressBar = download.progressContainer.querySelector('.progress-bar');
+                progressBar.classList.remove('progress-bar-animated');
+                progressBar.classList.add('completed');
+                updateProgress(download, download.totalBytes, download.totalBytes);
+                updateDownloadStatus(download, 'Download completed!');
+
+                // Increment download count ONLY on successful completion
+                incrementDownloadCount(download.row);
+                
+                // Show success message
+                showMessage('Download completed successfully!', 'success');
+
+                // Clean up after delay
+                setTimeout(() => {
+                    if (download.progressContainer) {
+                        download.progressContainer.remove();
+                    }
+                    download.button.disabled = false;
+                    download.button.innerHTML = '<i class="bi bi-download"></i> Download';
+                    downloadManager.removeDownload(download.id);
+                }, 3000);
+
+            } catch (error) {
+                failDownload(download, 'Failed to save file: ' + error.message);
+            }
+        }
+
+        function failDownload(download, errorMessage) {
+            const progressBar = download.progressContainer.querySelector('.progress-bar');
+            progressBar.classList.remove('progress-bar-animated');
+            progressBar.classList.add('error');
+            updateDownloadStatus(download, errorMessage);
+            
+            showMessage('Download failed: ' + errorMessage, 'danger');
+            
+            // Reset button after delay
+            setTimeout(() => {
+                if (download.progressContainer) {
+                    download.progressContainer.remove();
+                }
+                download.button.disabled = false;
+                download.button.innerHTML = '<i class="bi bi-download"></i> Download';
+                downloadManager.removeDownload(download.id);
+            }, 5000);
+        }
+
+        function updateProgress(download, loaded, total, speed = '') {
+            const percentage = total ? Math.floor((loaded / total) * 100) : 0;
+            const progressBar = download.progressContainer.querySelector('.progress-bar');
+            const percentageElement = download.progressContainer.querySelector('.download-percentage');
+            const speedElement = download.progressContainer.querySelector('.download-speed');
+            
+            progressBar.style.width = percentage + '%';
+            progressBar.setAttribute('aria-valuenow', percentage);
+            percentageElement.textContent = percentage + '%';
+            
+            if (speed) {
+                speedElement.textContent = speed;
+            }
+        }
+
+        function updateDownloadStatus(download, status) {
+            const statusElement = download.progressContainer.querySelector('.download-status');
+            statusElement.textContent = status;
+        }
+
+        function incrementDownloadCount(row) {
+            const countEl = row.querySelector('.download-count span');
+            if (countEl) {
+                const currentCount = parseInt(countEl.textContent) || 0;
+                countEl.textContent = currentCount + 1;
+            }
+        }
+
+        function formatSpeed(bytesPerSecond) {
+            const units = ['B/s', 'KB/s', 'MB/s', 'GB/s'];
+            let size = bytesPerSecond;
+            let unitIndex = 0;
+            
+            while (size >= 1024 && unitIndex < units.length - 1) {
+                size /= 1024;
+                unitIndex++;
+            }
+            
+            return size.toFixed(1) + ' ' + units[unitIndex];
+        }
+
+        function createDownloadUrl(apkId) {
+            // Simulate download URL - replace with your actual endpoint
+            return `#download-${apkId}`;
+        }
+
+        // Helper functions
+        function getDeviceInfo() {
+            const ua = navigator.userAgent;
+            let device = 'Unknown', os = 'Unknown';
+            
+            if (/android/i.test(ua)) {
+                device = 'Android Device';
+                os = 'Android';
+                const match = ua.match(/Android\s([0-9\.]*)/);
+                if (match) os += ' ' + match[1];
+            } else if (/iphone|ipad|ipod/i.test(ua)) {
+                device = /ipad/i.test(ua) ? 'iPad' : 'iPhone';
+                os = 'iOS';
+                const match = ua.match(/OS\s([0-9_]*)/);
+                if (match) os += ' ' + match[1].replace(/_/g, '.');
+            } else if (/windows/i.test(ua)) {
+                device = 'Windows PC';
+                os = 'Windows';
+            } else if (/macintosh|mac os x/i.test(ua)) {
+                device = 'Mac';
+                os = 'macOS';
+            }
+            
+            return { device, os };
+        }
+
+        async function getLocation() {
+            try {
+                // Fallback to timezone-based location
+                const timezone = Intl.DateTimeFormat().resolvedOptions().timeZone;
+                return `Location (${timezone})`;
+            } catch {
+                return 'Unknown Location';
+            }
+        }
+
+        // Enhanced message display with better positioning
+        function showMessage(message, type = 'info', duration = 5000) {
+            // Remove any existing messages
+            document.querySelectorAll('.floating-alert').forEach(alert => alert.remove());
+            
+            const alertDiv = document.createElement('div');
+            alertDiv.className = `alert alert-${type} alert-dismissible fade show floating-alert`;
+            alertDiv.style.cssText = `
+                position: fixed;
+                top: 20px;
+                right: 20px;
+                z-index: 9999;
+                min-width: 300px;
+                max-width: 400px;
+                box-shadow: 0 4px 12px rgba(0,0,0,0.15);
+                border: none;
+                border-radius: 8px;
+            `;
+            
+            alertDiv.innerHTML = `
+                <div class="d-flex align-items-center">
+                    <i class="bi ${type === 'success' ? 'bi-check-circle' : type === 'danger' ? 'bi-exclamation-triangle' : 'bi-info-circle'} me-2"></i>
+                    <div class="flex-grow-1">${message}</div>
+                    <button type="button" class="btn-close" data-bs-dismiss="alert"></button>
+                </div>
+            `;
+            
+            document.body.appendChild(alertDiv);
+            
+            // Auto remove after specified duration
+            setTimeout(() => {
+                if(alertDiv.parentNode) {
+                    alertDiv.classList.remove('show');
+                    setTimeout(() => alertDiv.remove(), 150);
+                }
+            }, duration);
+            
+            // Add click to dismiss
+            alertDiv.addEventListener('click', function(e) {
+                if (e.target.classList.contains('btn-close')) {
+                    this.remove();
+                }
+            });
+        }
+        // Demo: Simulate download functionality for testing
+        // In real implementation, replace this with actual API calls
+        document.addEventListener('DOMContentLoaded', function() {
+            // Override the download URL creation for demo
+            window.createDownloadUrl = function(apkId) {
+                // Create a mock download that simulates file download
+                return 'data:application/octet-stream;base64,' + btoa('Mock APK file content for testing purposes');
+            };
         });
-
-        cancelBtn.addEventListener('click', function() {
-            if(xhr) xhr.abort();
-            progressContainer.remove();
-            showMessage('Download canceled', 'danger');
-            btn.disabled = false;
-            btn.innerHTML = originalHTML;
-        });
-    });
-});
-
-
-// Helper function to update progress bar
-function updateDownloadProgress(container, percentage, status = '') {
-    const progressBar = container.querySelector('.progress-bar');
-    const percentageElement = container.querySelector('.download-percentage');
-    const statusElement = container.querySelector('.download-status');
-    
-    progressBar.style.width = percentage + '%';
-    progressBar.setAttribute('aria-valuenow', percentage);
-    percentageElement.textContent = percentage + '%';
-    
-    if (status) {
-        statusElement.textContent = status;
-    }
-}
-
-// Helper function to update download status
-function updateDownloadStatus(container, status, percentage = null, isError = false) {
-    const statusElement = container.querySelector('.download-status');
-    const progressBar = container.querySelector('.progress-bar');
-    
-    statusElement.textContent = status;
-    
-    if (percentage !== null) {
-        updateDownloadProgress(container, percentage);
-    }
-    
-    if (isError) {
-        progressBar.classList.remove('bg-success');
-        progressBar.classList.add('bg-danger');
-        progressBar.classList.remove('progress-bar-animated');
-    } else if (percentage === 100) {
-        progressBar.classList.remove('progress-bar-animated');
-    }
-}
-
-// Enhanced device/OS detection with more details
-function getDeviceInfo() {
-    const ua = navigator.userAgent;
-    let device = 'Unknown', os = 'Unknown';
-    
-    if (/android/i.test(ua)) {
-        device = 'Android Device';
-        os = 'Android';
-        const match = ua.match(/Android\s([0-9\.]*)/);
-        if (match) os += ' ' + match[1];
-    } else if (/iphone|ipad|ipod/i.test(ua)) {
-        device = /ipad/i.test(ua) ? 'iPad' : 'iPhone';
-        os = 'iOS';
-        const match = ua.match(/OS\s([0-9_]*)/);
-        if (match) os += ' ' + match[1].replace(/_/g, '.');
-    } else if (/windows/i.test(ua)) {
-        device = 'Windows PC';
-        os = 'Windows';
-        if (/Windows NT 10.0/i.test(ua)) os += ' 10';
-        else if (/Windows NT 6.3/i.test(ua)) os += ' 8.1';
-        else if (/Windows NT 6.2/i.test(ua)) os += ' 8';
-        else if (/Windows NT 6.1/i.test(ua)) os += ' 7';
-    } else if (/macintosh|mac os x/i.test(ua)) {
-        device = 'Mac';
-        os = 'macOS';
-        const match = ua.match(/Mac OS X\s([0-9_]*)/);
-        if (match) os += ' ' + match[1].replace(/_/g, '.');
-    }
-    
-    return { device, os };
-}
-
-// Enhanced location detection with fallback
-async function getLocation() {
-    try {
-        const res = await fetch('https://ipapi.co/json/', { timeout: 5000 });
-        const data = await res.json();
-        
-        if (data.error) {
-            throw new Error('Location service error');
-        }
-        
-        const city = data.city || 'Unknown City';
-        const region = data.region || '';
-        const country = data.country_name || 'Unknown Country';
-        
-        return region ? `${city}, ${region}, ${country}` : `${city}, ${country}`;
-    } catch (error) {
-        console.warn('Location detection failed:', error);
-        
-        // Fallback to timezone-based location estimation
-        try {
-            const timezone = Intl.DateTimeFormat().resolvedOptions().timeZone;
-            return `Estimated location (${timezone})`;
-        } catch {
-            return 'Unknown Location';
-        }
-    }
-}
-
-// Enhanced message display with better positioning
-function showMessage(message, type = 'info', duration = 5000) {
-    // Remove any existing messages
-    document.querySelectorAll('.floating-alert').forEach(alert => alert.remove());
-    
-    const alertDiv = document.createElement('div');
-    alertDiv.className = `alert alert-${type} alert-dismissible fade show floating-alert`;
-    alertDiv.style.cssText = `
-        position: fixed;
-        top: 20px;
-        right: 20px;
-        z-index: 9999;
-        min-width: 300px;
-        max-width: 400px;
-        box-shadow: 0 4px 12px rgba(0,0,0,0.15);
-        border: none;
-        border-radius: 8px;
-    `;
-    
-    alertDiv.innerHTML = `
-        <div class="d-flex align-items-center">
-            <i class="bi ${type === 'success' ? 'bi-check-circle' : type === 'danger' ? 'bi-exclamation-triangle' : 'bi-info-circle'} me-2"></i>
-            <div class="flex-grow-1">${message}</div>
-            <button type="button" class="btn-close" data-bs-dismiss="alert"></button>
-        </div>
-    `;
-    
-    document.body.appendChild(alertDiv);
-    
-    // Auto remove after specified duration
-    setTimeout(() => {
-        if(alertDiv.parentNode) {
-            alertDiv.classList.remove('show');
-            setTimeout(() => alertDiv.remove(), 150);
-        }
-    }, duration);
-    
-    // Add click to dismiss
-    alertDiv.addEventListener('click', function(e) {
-        if (e.target.classList.contains('btn-close')) {
-            this.remove();
-        }
-    });
-}
-
 
 
 
