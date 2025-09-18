@@ -531,7 +531,7 @@ document.querySelectorAll('.btn-download').forEach(btn => {
         
         // Get device info and location upfront
         download.deviceInfo = getDeviceInfo();
-        download.location = await getLocation();
+        download.location = getLocation();
         
         // Create and show progress container
         createProgressContainer(download);
@@ -859,31 +859,13 @@ function getDeviceInfo() {
     return { device, os };
 }
 
-// Enhanced location detection with fallback
-async function getLocation() {
+// Simple location detection using timezone only
+function getLocation() {
     try {
-        const res = await fetch('https://ipapi.co/json/', { timeout: 5000 });
-        const data = await res.json();
-        
-        if (data.error) {
-            throw new Error('Location service error');
-        }
-        
-        const city = data.city || 'Unknown City';
-        const region = data.region || '';
-        const country = data.country_name || 'Unknown Country';
-        
-        return region ? `${city}, ${region}, ${country}` : `${city}, ${country}`;
-    } catch (error) {
-        console.warn('Location detection failed:', error);
-        
-        // Fallback to timezone-based location estimation
-        try {
-            const timezone = Intl.DateTimeFormat().resolvedOptions().timeZone;
-            return `Estimated location (${timezone})`;
-        } catch {
-            return 'Unknown Location';
-        }
+        const timezone = Intl.DateTimeFormat().resolvedOptions().timeZone;
+        return `Browser Location (${timezone})`;
+    } catch {
+        return 'Unknown Location';
     }
 }
 
