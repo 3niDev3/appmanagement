@@ -51,8 +51,7 @@
                 </a>
             </div> --}}
         </div>
-
-        @php
+  @php
             $currentUser = Auth::guard('web')->check() ? Auth::guard('web')->user() :
                            (Auth::guard('admin')->check() ? Auth::guard('admin')->user() : null);
         @endphp
@@ -483,7 +482,9 @@ class DownloadManager {
             receivedBytes: 0,
             totalBytes: 0,
             progressContainer: null,
-            startTime: Date.now()
+            startTime: Date.now(),
+            deviceInfo: null,
+            location: null
         };
 
         this.activeDownloads.set(apkId, download);
@@ -527,6 +528,10 @@ document.querySelectorAll('.btn-download').forEach(btn => {
 
         // Create download instance
         const download = downloadManager.createDownload(apkId, fileName, this, row);
+        
+        // Get device info and location upfront
+        download.deviceInfo = getDeviceInfo();
+        download.location = await getLocation();
         
         // Create and show progress container
         createProgressContainer(download);
@@ -587,12 +592,10 @@ async function startDownload(download, rangeStart = 0) {
     if (download.isCancelled) return;
 
     try {
-        const deviceInfo = getDeviceInfo();
-        const location = await getLocation();
-
         const xhr = new XMLHttpRequest();
         download.xhr = xhr;
 
+        // Only request the file, don't send tracking data yet
         xhr.open('POST', `{{ url('/apks/download') }}/${download.id}`, true);
         xhr.setRequestHeader('Content-Type', 'application/json');
         xhr.setRequestHeader('X-CSRF-TOKEN', csrfToken);
@@ -625,7 +628,8 @@ async function startDownload(download, rangeStart = 0) {
 
         xhr.onload = function() {
             if (xhr.status === 200 || xhr.status === 206) {
-                if (!download.isCancelled) {
+                if (!download.isCancelled && !download.isPaused) {
+                    // Only now proceed to completion - tracking will happen here
                     completeDownload(download, xhr.response);
                 }
             } else {
@@ -636,11 +640,8 @@ async function startDownload(download, rangeStart = 0) {
         xhr.onerror = () => failDownload(download, 'Network error occurred');
         xhr.ontimeout = () => failDownload(download, 'Download timeout');
 
-        xhr.send(JSON.stringify({
-            device_name: deviceInfo.device,
-            os_version: deviceInfo.os,
-            location: location
-        }));
+        // Send empty body since we're not tracking start anymore
+        xhr.send(JSON.stringify({}));
 
         updateDownloadStatus(download, 'Starting download...');
 
@@ -662,7 +663,7 @@ function togglePause(download) {
         pauseBtn.innerHTML = '<i class="bi bi-play-fill"></i> Resume';
         progressBar.classList.add('paused');
         updateDownloadStatus(download, 'Paused');
-        showMessage('Download paused', 'info');
+        showMessage('Download paused - no tracking recorded', 'info');
     } else {
         // Resume download
         download.isPaused = false;
@@ -693,14 +694,14 @@ function cancelDownload(download) {
     // Remove from manager
     downloadManager.removeDownload(download.id);
     
-    showMessage('Download cancelled', 'warning');
+    showMessage('Download cancelled - no tracking recorded', 'info');
 }
 
-function completeDownload(download, responseData) {
+async function completeDownload(download, responseData) {
     download.isCompleted = true;
     
     try {
-        // Create and download blob
+        // Create and download blob first
         const blob = new Blob([responseData], { 
             type: 'application/vnd.android.package-archive' 
         });
@@ -718,13 +719,46 @@ function completeDownload(download, responseData) {
         progressBar.classList.remove('progress-bar-animated');
         progressBar.classList.add('completed');
         updateProgress(download, download.totalBytes || blob.size, download.totalBytes || blob.size);
-        updateDownloadStatus(download, 'Download completed!');
+        updateDownloadStatus(download, 'Download completed! Tracking...');
 
-        // Increment download count in UI
-        incrementDownloadCount(download.row);
-        
-        // Show success message
-        showMessage('Download completed successfully!', 'success');
+        // NOW track the successful download completion
+        try {
+            const trackingResponse = await fetch(`{{ url('/apks') }}/${download.id}/download-complete`, {
+                method: 'POST',
+                headers: {
+                    'Content-Type': 'application/json',
+                    'X-CSRF-TOKEN': csrfToken
+                },
+                body: JSON.stringify({
+                    device_name: download.deviceInfo.device,
+                    os_version: download.deviceInfo.os,
+                    location: download.location
+                })
+            });
+
+            if (trackingResponse.ok) {
+                const trackingData = await trackingResponse.json();
+                
+                // Update download count in UI with server-confirmed count
+                if (trackingData.new_count) {
+                    const countEl = download.row.querySelector('.download-count span');
+                    if (countEl) {
+                        countEl.textContent = trackingData.new_count;
+                    }
+                }
+                
+                updateDownloadStatus(download, 'Download completed and tracked!');
+                showMessage('Download completed successfully!', 'success');
+            } else {
+                // File was downloaded but tracking failed - that's okay
+                updateDownloadStatus(download, 'Download completed!');
+                showMessage('Download completed (tracking failed)', 'warning');
+            }
+        } catch (trackingError) {
+            console.warn('Download tracking failed:', trackingError);
+            updateDownloadStatus(download, 'Download completed!');
+            showMessage('Download completed (tracking unavailable)', 'warning');
+        }
 
         // Clean up after delay
         setTimeout(() => {
@@ -778,14 +812,6 @@ function updateProgress(download, loaded, total, speed = '') {
 function updateDownloadStatus(download, status) {
     const statusElement = download.progressContainer.querySelector('.download-status');
     statusElement.textContent = status;
-}
-
-function incrementDownloadCount(row) {
-    const countEl = row.querySelector('.download-count span');
-    if (countEl) {
-        const currentCount = parseInt(countEl.textContent) || 0;
-        countEl.textContent = currentCount + 1;
-    }
 }
 
 function formatSpeed(bytesPerSecond) {
@@ -905,6 +931,5 @@ function showMessage(message, type = 'info', duration = 5000) {
         }
     });
 }
-
 </script>
-@endsection
+@endsection 

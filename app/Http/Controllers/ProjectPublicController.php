@@ -194,54 +194,53 @@ class ProjectPublicController extends Controller
 
 
     // ================== API: Download APK ==================
-    public function apiDownload(ProjectApk $apk, Request $request)
+    // Modified apiDownload - Don't track anything yet
+public function apiDownload(ProjectApk $apk, Request $request)
 {
     try {
-        Log::info('Download request for APK ID: ' . $apk->id);
-        
-        // Validate that the file exists
+        // Validate file exists
         if (!Storage::disk('public')->exists($apk->filepath)) {
-            Log::error('File not found: ' . $apk->filepath);
             return response()->json(['status'=>'error','message'=>'File not found'], 404);
         }
 
         $fullPath = Storage::disk('public')->path($apk->filepath);
         
-        if (!file_exists($fullPath)) {
-            Log::error('Physical file not found: ' . $fullPath);
-            return response()->json(['status'=>'error','message'=>'Physical file not found'], 404);
-        }
-
-        // Track download history
-        try {
-            ApkDownload::create([
-                'apk_id'     => $apk->id,
-                'user_id'    => auth()->id(),
-                'device_name'=> $request->input('device_name', 'Unknown'),
-                'os_version' => $request->input('os_version', 'Unknown'),
-                'location'   => $request->input('location', 'Unknown'),
-                'download_time' => now(),
-            ]);
-        } catch (\Exception $e) {
-            Log::error('Failed to save download history: ' . $e->getMessage());
-        }
-
-        // Increment download count BEFORE serving the file
-        $apk->increment('download_count');
-        
-        Log::info('Serving file download: ' . $apk->filename);
-
+        // Just serve the file - NO tracking here
         return response()->download($fullPath, $apk->filename, [
             'Content-Type' => 'application/vnd.android.package-archive',
             'Content-Disposition' => 'attachment; filename="' . $apk->filename . '"'
         ]);
 
     } catch (\Exception $e) {
-        Log::error('Download error: ' . $e->getMessage());
+        return response()->json(['status' => 'error', 'message' => 'Download failed'], 500);
+    }
+}
+
+// NEW method - Only track when download actually completes
+public function apiDownloadComplete(ProjectApk $apk, Request $request)
+{
+    try {
+        DB::transaction(function () use ($apk, $request) {
+            // NOW increment count and save history
+            $apk->increment('download_count');
+            
+            ApkDownload::create([
+                'apk_id'        => $apk->id,
+                'user_id'       => auth()->id(),
+                'device_name'   => $request->input('device_name', 'Unknown'),
+                'os_version'    => $request->input('os_version', 'Unknown'),
+                'location'      => $request->input('location', 'Unknown'),
+                'download_time' => now(),
+            ]);
+        });
+
         return response()->json([
-            'status' => 'error',
-            'message' => 'Download failed: ' . $e->getMessage()
-        ], 500);
+            'status' => 'success',
+            'new_count' => $apk->fresh()->download_count
+        ]);
+
+    } catch (\Exception $e) {
+        return response()->json(['status' => 'error'], 500);
     }
 }
 
