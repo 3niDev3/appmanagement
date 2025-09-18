@@ -79,9 +79,7 @@
                         <div>
                             <div class="fw-semibold">{{ $apk->filename }}</div>
                             <div class="text-muted small">{{ $apk->created_at->format('d M Y h:i A') }}</div>
-                            @if($apk->uploadedBy)
-                                <div class="text-muted small">By: {{ $apk->uploadedBy->name }}</div>
-                            @endif
+    
                             <div class="text-muted small download-count">
                                 Downloads: <span>{{ $apk->download_count ?? 0 }}</span>
                             </div>
@@ -860,14 +858,33 @@ function getDeviceInfo() {
 }
 
 // Simple location detection using timezone only
-function getLocation() {
+async function getLocation() {
     try {
-        const timezone = Intl.DateTimeFormat().resolvedOptions().timeZone;
-        return `Browser Location (${timezone})`;
-    } catch {
-        return 'Unknown Location';
+        const res = await fetch('https://ipapi.co/json/', { timeout: 5000 });
+        const data = await res.json();
+        
+        if (data.error) {
+            throw new Error('Location service error');
+        }
+        
+        const city = data.city || 'Unknown City';
+        const region = data.region || '';
+        const country = data.country_name || 'Unknown Country';
+        
+        return region ? `${city}, ${region}, ${country}` : `${city}, ${country}`;
+    } catch (error) {
+        console.warn('Location detection failed:', error);
+        
+        // Fallback to timezone-based location estimation
+        try {
+            const timezone = Intl.DateTimeFormat().resolvedOptions().timeZone;
+            return `Estimated location (${timezone})`;
+        } catch {
+            return 'Unknown Location';
+        }
     }
 }
+
 
 // Enhanced message display with better positioning
 function showMessage(message, type = 'info', duration = 5000) {
