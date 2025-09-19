@@ -4,7 +4,7 @@ namespace App\Http\Controllers;
 
 use App\Models\Project;
 use App\Models\ProjectApk;
-use App\Models\ApkDownload; // new table for download history
+use App\Models\ApkDownload;
 use Illuminate\Http\Request;
 use Illuminate\Support\Facades\Auth;
 use Illuminate\Support\Facades\Storage;
@@ -81,6 +81,41 @@ class ProjectPublicController extends Controller
         
         return collect(); // Empty collection for guests
     }
+
+    // ================== Web: Logout ==================
+    public function logout(Request $request, $project_slug = null)
+    {
+        $redirectRoute = null;
+        $redirectParams = [];
+
+        // Store redirect info before logout
+        if ($project_slug) {
+            $redirectRoute = 'project.list';
+            $redirectParams = [$project_slug];
+        }
+
+        // Logout depending on which guard is authenticated
+        if (Auth::guard('web')->check()) {
+            Auth::guard('web')->logout();
+        } elseif (Auth::guard('admin')->check()) {
+            Auth::guard('admin')->logout();
+        }
+
+        // Invalidate session and regenerate token
+        $request->session()->invalidate();
+        $request->session()->regenerateToken();
+
+        // Redirect appropriately
+        if ($redirectRoute && $redirectParams) {
+            return redirect()->route($redirectRoute, $redirectParams)
+                ->with('success', 'You have been logged out successfully.');
+        }
+
+        // Default fallback to homepage
+        return redirect('/')
+            ->with('success', 'You have been logged out successfully.');
+    }
+
 
     // ================== Web: List APKs ==================
     public function list($project_slug)
@@ -203,7 +238,7 @@ class ProjectPublicController extends Controller
         // Clean old APKs (keep only 10 latest)
         $this->cleanOldApks($project->id);
 
-        return redirect()->route('project.uploadForm', $project_slug)
+        return redirect()->route('project.list', $project_slug)
             ->with('success', 'APK uploaded successfully. Old APKs automatically cleaned.');
     }
 

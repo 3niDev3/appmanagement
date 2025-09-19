@@ -6,7 +6,7 @@
     <title>@yield('title', 'APK Manager')</title>
     <link href="https://cdn.jsdelivr.net/npm/bootstrap@5.3.2/dist/css/bootstrap.min.css" rel="stylesheet">
     <link href="https://cdn.jsdelivr.net/npm/bootstrap-icons@1.10.5/font/bootstrap-icons.css" rel="stylesheet">
-    <style>
+     <style>
         body {
             background-color: #f4f6f9;
             color: #333;
@@ -23,6 +23,47 @@
         }
         .navbar-brand:hover {
             color: #e2e6ea;
+        }
+        .navbar-nav .nav-link {
+            color: #fff !important;
+            font-weight: 500;
+        }
+        .navbar-nav .nav-link:hover {
+            color: #e2e6ea !important;
+        }
+        .dropdown-menu {
+            max-height: 300px;
+            overflow-y: auto;
+            border: none;
+            box-shadow: 0 4px 12px rgba(0,0,0,0.15);
+            border-radius: 8px;
+        }
+        .dropdown-item {
+            padding: 8px 16px;
+            font-size: 0.9rem;
+        }
+        .dropdown-item:hover {
+            background-color: #f8f9fa;
+        }
+        .dropdown-divider {
+            margin: 4px 0;
+        }
+        .user-info {
+            background-color: #e3f2fd;
+            color: #0d6efd;
+            font-weight: 500;
+        }
+        .btn-logout {
+            background-color: #dc3545;
+            border-color: #dc3545;
+            color: white;
+            font-size: 0.875rem;
+            padding: 4px 12px;
+            border-radius: 20px;
+        }
+        .btn-logout:hover {
+            background-color: #c82333;
+            border-color: #bd2130;
         }
         /* Footer */
         footer {
@@ -69,65 +110,206 @@
             text-overflow: ellipsis;
             white-space: nowrap;
         }
+        
+        /* Project selector styles */
+        .project-selector {
+            min-width: 200px;
+        }
+        
+        .current-project {
+            background-color: rgba(255, 255, 255, 0.1);
+            border: 1px solid rgba(255, 255, 255, 0.2);
+            color: white;
+            font-weight: 500;
+        }
+        
+        .current-project:hover {
+            background-color: rgba(255, 255, 255, 0.15);
+            color: white;
+        }
+        
+        .project-dropdown-item {
+            display: flex;
+            justify-content: space-between;
+            align-items: center;
+        }
+        
+        .project-dropdown-item i {
+            opacity: 0.6;
+        }
+        
+        .navbar-collapse {
+            flex-grow: 0;
+        }
+        
+        @media (max-width: 768px) {
+            .navbar-nav {
+                padding-top: 1rem;
+            }
+            .dropdown-menu {
+                position: static !important;
+                transform: none !important;
+                box-shadow: none;
+                border: 1px solid #dee2e6;
+                margin-top: 0.5rem;
+            }
+            .project-selector {
+                min-width: 100%;
+            }
+        }
+
+        .upload-card {
+            border: 2px dashed #dee2e6;
+            border-radius: 15px;
+            background-color: #f8f9fa;
+            transition: all 0.3s ease;
+        }
+
+        .dropzone {
+            border: 2px dashed #6c757d;
+            background-color: #f1f3f5;
+            cursor: pointer;
+            transition: all 0.3s ease;
+        }
+
+        .dropzone:hover, .dropzone.dragover {
+            border-color: #007bff;
+            background-color: #e3f2fd;
+        }
+
+        .progress-container {
+            margin-top: 20px;
+        }
+
+        .progress {
+            height: 25px;
+            border-radius: 15px;
+            background-color: #e9ecef;
+        }
+
+        .progress-bar {
+            border-radius: 15px;
+            transition: width 0.3s ease;
+        }
+
+        .upload-status {
+            margin-top: 10px;
+            font-size: 14px;
+        }
+
+        .speed-info {
+            font-size: 12px;
+            color: #6c757d;
+        }
+
+        .file-info {
+            background: #e3f2fd;
+            border: 1px solid #2196f3;
+            border-radius: 8px;
+            padding: 10px;
+            margin: 15px 0;
+        }
     </style>
-    <style>
-    .upload-card {
-        border: 2px dashed #dee2e6;
-        border-radius: 15px;
-        background-color: #f8f9fa;
-        transition: all 0.3s ease;
-    }
-
-    .dropzone {
-        border: 2px dashed #6c757d;
-        background-color: #f1f3f5;
-        cursor: pointer;
-        transition: all 0.3s ease;
-    }
-
-    .dropzone:hover, .dropzone.dragover {
-        border-color: #007bff;
-        background-color: #e3f2fd;
-    }
-
-    .progress-container {
-        margin-top: 20px;
-    }
-
-    .progress {
-        height: 25px;
-        border-radius: 15px;
-        background-color: #e9ecef;
-    }
-
-    .progress-bar {
-        border-radius: 15px;
-        transition: width 0.3s ease;
-    }
-
-    .upload-status {
-        margin-top: 10px;
-        font-size: 14px;
-    }
-
-    .speed-info {
-        font-size: 12px;
-        color: #6c757d;
-    }
-
-    .file-info {
-        background: #e3f2fd;
-        border: 1px solid #2196f3;
-        border-radius: 8px;
-        padding: 10px;
-        margin: 15px 0;
-    }
-</style>
 </head>
 <body>
-    <nav class="navbar navbar-expand-lg">
+     <nav class="navbar navbar-expand-lg">
         <div class="container">
-            <a class="navbar-brand" href="#">APK Manager</a>
+            <a class="navbar-brand" href="#">
+                <i class="bi bi-phone me-2"></i>APK Manager
+            </a>
+            
+            <button class="navbar-toggler" type="button" data-bs-toggle="collapse" data-bs-target="#navbarNav">
+                <span class="navbar-toggler-icon"></span>
+            </button>
+            
+            <div class="collapse navbar-collapse" id="navbarNav">
+                <ul class="navbar-nav ms-auto align-items-center">
+                    @if(Auth::guard('web')->check() || Auth::guard('admin')->check())
+                        @php
+                            $currentUser = Auth::guard('web')->check() ? Auth::guard('web')->user() : Auth::guard('admin')->user();
+                            $isAdmin = Auth::guard('admin')->check();
+                        @endphp
+                        
+                        <!-- Project Selector Dropdown -->
+                        @if(isset($userProjects) && $userProjects->count() > 0)
+                        <li class="nav-item dropdown me-3">
+                            <button class="btn current-project dropdown-toggle project-selector" type="button" data-bs-toggle="dropdown">
+                                <i class="bi bi-folder me-1"></i>
+                                @if(isset($project))
+                                    {{ Str::limit($project->name, 20) }}
+                                @else
+                                    Select Project
+                                @endif
+                            </button>
+                            <ul class="dropdown-menu">
+                                <li><h6 class="dropdown-header"><i class="bi bi-building me-1"></i>Available Projects</h6></li>
+                                <li><hr class="dropdown-divider"></li>
+                                @foreach($userProjects as $proj)
+                                <li>
+                                    <a class="dropdown-item project-dropdown-item" href="{{ route('project.list', $proj->slug) }}">
+                                        <span>
+                                            <i class="bi bi-folder me-2"></i>{{ $proj->name }}
+                                        </span>
+                                        @if(isset($project) && $project->id == $proj->id)
+                                            <i class="bi bi-check-circle text-success"></i>
+                                        @endif
+                                    </a>
+                                </li>
+                                @endforeach
+                            </ul>
+                        </li>
+                        @endif
+                        
+                        <!-- User Info & Actions -->
+                        <li class="nav-item dropdown">
+                            <button class="btn btn-outline-light dropdown-toggle" type="button" data-bs-toggle="dropdown">
+                                <i class="bi bi-person-circle me-1"></i>
+                                {{ Str::limit($currentUser->name, 15) }}
+                                @if($isAdmin)
+                                    <span class="badge bg-warning text-dark ms-1">Admin</span>
+                                @endif
+                            </button>
+                            <ul class="dropdown-menu dropdown-menu-end">
+                                <li>
+                                    <div class="dropdown-item user-info">
+                                        <i class="bi bi-person me-2"></i>
+                                        <div>
+                                            <div class="fw-semibold">{{ $currentUser->name }}</div>
+                                            <small class="text-muted">{{ $currentUser->email }}</small>
+                                        </div>
+                                    </div>
+                                </li>
+                                <li><hr class="dropdown-divider"></li>
+                                
+                                @if(isset($project))
+                                <li>
+                                    <a class="dropdown-item" href="{{ route('project.list', $project->slug) }}">
+                                        <i class="bi bi-list me-2"></i>View APKs
+                                    </a>
+                                </li>
+                                @if($isAdmin || (Auth::guard('web')->check() && Auth::guard('web')->user()->can_upload))
+                                <li>
+                                    <a class="dropdown-item" href="{{ route('project.uploadForm', $project->slug) }}">
+                                        <i class="bi bi-upload me-2"></i>Upload APK
+                                    </a>
+                                </li>
+                                @endif
+                                <li><hr class="dropdown-divider"></li>
+                                @endif
+                                
+                                <li>
+                                    <form method="POST" action="{{ isset($project) ? route('project.logout', $project->slug) : route('logout') }}" class="d-inline">
+                                        @csrf
+                                        <button type="submit" class="dropdown-item text-danger">
+                                            <i class="bi bi-box-arrow-right me-2"></i>Logout
+                                        </button>
+                                    </form>
+                                </li>
+                            </ul>
+                        </li>
+                    @endif
+                </ul>
+            </div>
         </div>
     </nav>
 
