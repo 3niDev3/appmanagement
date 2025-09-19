@@ -32,6 +32,56 @@ class ProjectPublicController extends Controller
         ]);
     }
 
+    // ================== Helper: Clean Old APKs (Keep Only 10) ==================
+    private function cleanOldApks($project_id)
+    {
+        try {
+            // Get all APKs for this project, ordered by creation date (newest first)
+            $allApks = ProjectApk::where('project_id', $project_id)
+                ->orderBy('created_at', 'desc')
+                ->get();
+
+            // If more than 10 APKs exist, delete the oldest ones
+            if ($allApks->count() > 10) {
+                $apksToDelete = $allApks->slice(10); // Get APKs beyond the first 10
+
+                foreach ($apksToDelete as $apk) {
+                    // Delete physical file
+                    if (Storage::disk('public')->exists($apk->filepath)) {
+                        Storage::disk('public')->delete($apk->filepath);
+                        Log::info('Deleted file: ' . $apk->filepath);
+                    }
+
+                    // Delete download history records
+                    ApkDownload::where('apk_id', $apk->id)->delete();
+
+                    // Delete the APK record (hard delete)
+                    $apk->delete();
+                    
+                    Log::info('Hard deleted APK: ' . $apk->filename . ' (ID: ' . $apk->id . ')');
+                }
+
+                Log::info('Cleaned ' . $apksToDelete->count() . ' old APKs for project ID: ' . $project_id);
+            }
+        } catch (\Exception $e) {
+            Log::error('Failed to clean old APKs: ' . $e->getMessage());
+        }
+    }
+
+    // ================== Helper: Get User's Projects ==================
+    private function getUserProjects()
+    {
+        if (Auth::guard('admin')->check()) {
+            // Admin can see all projects
+            return Project::orderBy('name')->get();
+        } elseif (Auth::guard('web')->check()) {
+            // Regular user can only see assigned projects
+            return Auth::guard('web')->user()->projects()->orderBy('name')->get();
+        }
+        
+        return collect(); // Empty collection for guests
+    }
+
     // ================== Web: List APKs ==================
     public function list($project_slug)
     {
@@ -49,8 +99,13 @@ class ProjectPublicController extends Controller
                 ->with('error', $e->errors()['error'][0]);
         }
 
-        $apks = $project->apks()->with('uploadedBy')->latest()->get();
-        return view('projects.list', compact('project', 'apks'));
+        // Get only the latest 10 APKs
+        $apks = $project->apks()->with('uploadedBy')->latest()->limit(10)->get();
+        
+        // Get user's projects for dropdown
+        $userProjects = $this->getUserProjects();
+
+        return view('projects.list', compact('project', 'apks', 'userProjects'));
     }
 
     // ================== Web: Login + List ==================
@@ -110,9 +165,11 @@ class ProjectPublicController extends Controller
                 ->with('error', $e->errors()['error'][0]);
         }
 
-        return view('projects.upload', compact('project'));
-    }
+        // Get user's projects for dropdown
+        $userProjects = $this->getUserProjects();
 
+        return view('projects.upload', compact('project', 'userProjects'));
+    }
 
     // ================== Web: Upload Store ==================
     public function uploadStore(Request $request, $project_slug)
@@ -134,6 +191,7 @@ class ProjectPublicController extends Controller
         $filename = time() . '_' . $file->getClientOriginalName();
         $path = $file->storeAs('apks/' . $project->slug, $filename, 'public');
 
+        // Create new APK record
         ProjectApk::create([
             'project_id' => $project->id,
             'filename' => $filename,
@@ -142,11 +200,12 @@ class ProjectPublicController extends Controller
             'uploaded_by' => Auth::id(),
         ]);
 
+        // Clean old APKs (keep only 10 latest)
+        $this->cleanOldApks($project->id);
+
         return redirect()->route('project.uploadForm', $project_slug)
-            ->with('success', 'APK uploaded successfully.');
+            ->with('success', 'APK uploaded successfully. Old APKs automatically cleaned.');
     }
-
-
 
     // ================== Web: Login + Upload ==================
     public function loginAndUpload(Request $request, $project_slug)
@@ -190,8 +249,7 @@ class ProjectPublicController extends Controller
 
         return redirect()->back()->with('showLogin', true)
             ->with('error', 'Invalid credentials. Please try again.');
-}
-
+    }
 
     // ================== API: Download APK ==================
     public function apiDownload(ProjectApk $apk, Request $request)
@@ -288,5 +346,4 @@ class ProjectPublicController extends Controller
             ], 500);
         }
     }
-    
 }
